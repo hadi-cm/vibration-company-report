@@ -6,13 +6,13 @@ st.set_page_config(page_title="سامانه پایش ارتعاشات - فاز �
 try:
     col1, col2, col3 = st.columns([1, 2, 1]) 
     with col2:
-        # نمایش لوگو (نام فایل را اگر jpg است تغییر دهید)
+        # نمایش لوگو
         st.image("logo.png", use_container_width=True) 
 except:
     st.warning("فایل لوگو یافت نشد. لطفاً نام فایل را در گیت‌هاب چک کنید.")
 # عنوان سامانه درست زیر لوگو
 st.markdown("<p style='text-align: center; font-size: 20px; font-weight: bold; color: #555555;'>📊 سامانه هوشمند پایش وضعیت ارتعاشات تجهیزات</p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: #888888;'>توسعه‌دهنده: هادی</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; color: #888888;'>توسعه‌دهنده: 💻 مهندس هادی زندیه</p>", unsafe_allow_html=True)
 st.divider()
 # ----------------------------------------------
 # آدرس گوگل شیت

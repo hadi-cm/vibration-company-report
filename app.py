@@ -10,8 +10,17 @@ st.divider()
 
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
 
+@st.cache_data(ttl=60
+   
 @st.cache_data(ttl=60)
 def load_data():
+    df = pd.read_csv(SHEET_URL)
+    df.columns = ['تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز', 'محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'واحد اندازه گیری', 'توضیحات', 'وضعیت']
+    df = df[~df['تاریخ'].astype(str).str.contains('تاریخ')]
+    cols_to_fill = ['تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز']
+    df[cols_to_fill] = df[cols_to_fill].ffill()
+    return df
+           
     df = pd.read_csv(SHEET_URL)
     df.columns = df.columns.str.strip()
     st.write(list(df.columns))

@@ -1,5 +1,34 @@
 import streamlit as st
 import pandas as pd
+
+st.set_page_config(page_title="سامانه پایش ارتعاشات - فاز فیدار پارسیان", layout="wide")
+
+# --- بخش لوگو و نام شرکت ---
+try:
+    col1, col2, col3 = st.columns([1, 2, 1]) # برای وسط‌چین کردن محتوا
+    with col2:
+        # نمایش لوگو (اگر پسوند jpg است به logo.jpg تغییر دهید)
+        st.image("logo.png", use_container_width=True) 
+        
+        # نمایش اسم شرکت با استایل درشت و رسمی
+        st.markdown("<h1 style='text-align: center; color: #1E3A8A; margin-bottom: 0;'>فاز فیدار پارسیان</h1>", unsafe_allow_html=True)
+        
+        # نمایش شماره ثبت با فونت کوچک‌تر و خاکستری برای زیبایی بیشتر
+        st.markdown("<p style='text-align: center; color: #666666; font-size: 16px; margin-top: 0;'>ثبت ۶۳۳۷۷۳</p>", unsafe_allow_html=True)
+        
+except:
+    st.warning("فایل لوگو یافت نشد. لطفاً نام فایل را در گیت‌هاب چک کنید.")
+# ---------------------------
+
+st.markdown("<p style='text-align: center; font-weight: bold;'>📊 سامانه هوشمند پایش وضعیت ارتعاشات تجهیزات</p>", unsafe_allow_html=True)
+st.caption("توسعه‌دهنده: هادی")
+st.divider()
+
+# از اینجا به بعد کد قبلی (SHEET_URL و بقیه توابع) بدون تغییر باشد
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
+
+import streamlit as st
+import pandas as pd
 st.set_page_config(page_title="سامانه پایش ارتعاشات", layout="wide")
 st.title("📊 سامانه هوشمند پایش وضعیت")
 st.caption("گزارش تحلیلی ارتعاشات تجهیزات | توسعه‌دهنده: هادی")

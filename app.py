@@ -1,4 +1,3 @@
-```python
 import streamlit as st
 import pandas as pd
 # ۱. تنظیمات صفحه
@@ -101,5 +100,4 @@ st.markdown(f"""
         <p>تمامی حقوق مادی و معنوی متعلق به <b>{COMPANY_NAME}</b> است.</p>
         <p>🚀 طراحی، تحلیل و توسعه سیستم توسط: <span class='designer-name'>هادی</span></p>
     </div>
-    """, unsafe_allow_html=True)
-```
+  unsafe_allow_html=True)

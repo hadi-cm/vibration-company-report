@@ -13,6 +13,7 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-
 @st.cache_data(ttl=60)
 def load_data():
     df = pd.read_csv(SHEET_URL)
+    st.write(list(df.columns))
     df = df[~df['تاریخ'].astype(str).str.contains('تاریخ')]
     cols_to_fill = ['تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز']
     df[cols_to_fill] = df[cols_to_fill].ffill()

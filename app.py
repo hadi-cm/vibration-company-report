@@ -1,13 +1,13 @@
 import streamlit as st
 import pandas as pd
 st.set_page_config(page_title="سامانه گزارش ارتعاشات اختصاصی", layout="wide")
-st.markdown("""
+st.markdown(
 <style>
 .company-name {font-size: 34px; font-weight: bold; color: #1e3a8a; font-family: Tahoma, sans-serif;}
 .designer-footer {text-align: center; padding: 20px; color: #6c757d; font-size: 14px; border-top: 1px solid #dee2e6; margin-top: 50px;}
 .designer-name {color: #007bff; font-weight: bold; font-size: 16px;}
 </style>
-""", unsafe_allow_html=True)
+, unsafe_allow_html=True)
 LOGO_URL = "https://via.placeholder.com/80"
 COMPANY_NAME = "نام شرکت شما"
 col1, col2 = st.columns([1, 5])
@@ -34,7 +34,7 @@ def color_status(val):
         return 'background-color: #ffffcc'
     if 'نرمال' in str(val):
         return 'background-color: #ccffcc'
-    return ''
+    return
 df = load_data()
 if df is not None:
     st.sidebar.header("🔍 فیلترهای گزارش")
@@ -47,23 +47,22 @@ if df is not None:
         for line in selected_line:
             line_df = filtered_df[filtered_df['خط تولید'] == line]
             if not line_df.empty:
-                st.subheader(f"🏢 خط تولید: {line}")
+                st.subheader(f"🏢 خط تولید: {line})
                 for eq in line_df['عنوان تجهیز'].dropna().unique():
                     eq_df = line_df[line_df['عنوان تجهیز'] == eq].copy()
                     unit_name = eq_df['واحد'].iloc[0]
-                    st.markdown(f"**📦 تجهیز:** {eq} | *واحد: {unit_name}")
+                    st.markdown(f"**📦 تجهیز:** {eq} | *واحد: {unit_name})
                     styled_df = eq_df[['محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'وضعیت']].style.map(color_status, subset=['وضعیت'])
                     st.dataframe(styled_df, use_container_width=True)
-                    st.markdown("---")
+                    st.markdown()
     else:
-        st.warning("داده‌ای یافت نشد.")
+        st.warning(داده‌ای یافت نشد.)
 else:
-    st.error("خطا در بارگذاری داده‌ها.")
+    st.error(خطا در بارگذاری داده‌ها.)
 
-st.markdown(f"""
+st.markdown(f
 <div class='designer-footer'>
     <p>تمامی حقوق مادی و معنوی متعلق به <b>{COMPANY_NAME}</b> است.</p>
     <p>🚀 طراحی، تحلیل و توسعه سیستم توسط: <span class='designer-name'>هادی</span></p>
 </div>
-""", unsafe_allow_html=True)
-```
+, unsafe_allow_html=True)

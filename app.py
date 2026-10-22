@@ -1,17 +1,31 @@
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
 # تنظیمات صفحه
-st.set_page_config(page_title="سامانه پایش ارتعاشات - فاز فیدار پارسیان", layout="wide")
-# --- بخش لوگو و هدر ---
-col_logo, col_title, col_empty = st.columns([1, 4, 1])
-with col_logo:
+st.set_page_config(page_title="سامانه جامع پایش وضعیت - فاز فیدار پارسیان", layout="wide")
+# --- استایل‌های CSS ---
+st.markdown("""
+    <style>
+    .main { text-align: right; }
+    div[data-testid="stExpander"] { text-align: right; }
+    .stDataFrame { text-align: right; }
+    </style>
+    """, unsafe_allow_html=True)
+# --- هدر با دو لوگو ---
+col_client, col_title, col_me = st.columns([1, 3, 1])
+with col_client:
     try:
-        st.image("logo.png", width=150) 
+        st.image("client_logo.png", width=150)
     except:
-        pass
+        st.info("لوگوی کارفرما")
 with col_title:
-    st.markdown("<h2 style='text-align: center; color: #333333; margin-bottom: 0;'>📊 سامانه هوشمند پایش وضعیت ارتعاشات تجهیزات</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #888888; font-size: 16px;'>توسعه‌دهنده: 💻 مهندس هادی زندیه</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; color: #2c3e50;'>🛠️ سامانه هوشمند تحلیل روند و پایش ارتعاشات تجهیزات</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #7f8c8d;'>مدیریت متمرکز پایش وضعیت و تاریخچه تعمیرات - مهندس هادی زندیه</p>", unsafe_allow_html=True)
+with col_me:
+    try:
+        st.image("my_logo.png", width=150)
+    except:
+        st.info("لوگوی مهندس هادی")
 st.divider()
 # آدرس گوگل شیت
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
@@ -19,66 +33,93 @@ SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        # اصلاح ترتیب ستون‌ها دقیقاً مطابق تصویر ارسالی شما (ستون A تا O)
+        # تطبیق دقیق با ستون‌های گوگل‌شیت شما
         df.columns = [
             'تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز', 'تصویر تجهیز', 
             'محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'واحد اندازه گیری', 
-            'دور تجهیز', 'دمای تجهیز', 'تناژ یا بارخور', 'توضیحات', 'وضعیت'
+            'دور تجهیز', 'دمای تجهیز', 'تناژ یا بارخور', 'توضیحات', 'وضعیت', 
+            'اقدام اصلاحی', 'هزینه'
         ]
-        # حذف ردیف هدر احتمالی و پر کردن خانه‌های خالی (Merge شده)
-        df = df[~df['تاریخ'].astype(str).str.contains('تاریخ')]
-        # پر کردن مقادیر خالی برای تاریخ، خط، واحد و تجهیز (بخاطر ساختار Merge شیت)
-        cols_to_ffill = ['تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز', 'تصویر تجهیز']
-        df[cols_to_ffill] = df[cols_to_ffill].ffill()
+        # حذف ردیف هدر تکراری در صورت وجود
+        df = df[df['تاریخ'].astype(str) != 'تاریخ']
+        # پر کردن سلول‌های خالی بالایی (برای تاریخ، خط تولید و نام تجهیز در حالت فلت)
+        df[['تاریخ', 'خط تولید', 'عنوان تجهیز']] = df[['تاریخ', 'خط تولید', 'عنوان تجهیز']].ffill()
         # تبدیل ستون‌های عددی
-        for c in ['عمودی', 'افقی', 'محوری']:
-            df[c] = pd.to_numeric(df[c], errors='coerce')
+        numeric_cols = ['عمودی', 'افقی', 'محوری', 'دور تجهیز', 'دمای تجهیز', 'تناژ یا بارخور', 'هزینه']
+        for col in numeric_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         return df
     except Exception as e:
-        st.error(f"خطا در بارگذاری داده‌ها: {e}")
+        st.error(f"خطا در بارگذاری داده‌ها از گوگل شیت: {e}")
         return None
 def color_vibration(val):
-    if pd.isna(val): return ''
-    if val > 7.2: return 'background-color: #ffcccc; color: black' # قرمز روشن
-    if val >= 4.7: return 'background-color: #ffffcc; color: black' # زرد روشن
-    return ''
-def color_status_text(val):
-    val_str = str(val)
-    if 'هشدار' in val_str: return 'background-color: #ffcccc; color: black'
-    if 'مراقبت' in val_str: return 'background-color: #ffffcc; color: black'
-    if 'نرمال' in val_str: return 'background-color: #ccffcc; color: black'
+    if val == 0: return ''
+    if val > 7.2: return 'background-color: #ffcccc; color: black' # قرمز (بحرانی)
+    if val >= 4.7: return 'background-color: #ffffcc; color: black' # زرد (هشدار)
     return ''
 df = load_data()
 if df is not None:
-    # فیلتر خط تولید در سایدبار
+    # --- سایدبار ---
+    st.sidebar.header("🧭 منوی مدیریت سامانه")
+    app_mode = st.sidebar.selectbox("انتخاب بخش", ["📊 گزارش ماهانه", "📈 تحلیل روند و پرونده تجهیز", "💰 گزارش مالی و تعمیرات"])
     all_lines = df['خط تولید'].dropna().unique().tolist()
-    selected_lines = st.sidebar.multiselect("انتخاب خط تولید", all_lines, default=all_lines)
-    for line in selected_lines:
-        line_data = df[df['خط تولید'] == line]
-        st.header(f"🏢 خط تولید: {line}")
-        for eq in line_data['عنوان تجهیز'].unique():
-            eq_data = line_data[line_data['عنوان تجهیز'] == eq]
-            # بخش نمایش نام و تصویر تجهیز
-            img_url = eq_data['تصویر تجهیز'].iloc[0]
-            col_eq_text, col_eq_img = st.columns([4, 1])
-            with col_eq_text:
-                st.subheader(f"📦 تجهیز: {eq}")
-            with col_eq_img:
-                if pd.notna(img_url) and str(img_url).startswith('http'):
-                    st.image(img_url, width=100)
-                else:
-                    st.write("📷 بدون عکس")
-            # انتخاب ستون‌ها برای نمایش در جدول نهایی
-            display_cols = ['محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'دمای تجهیز', 'تناژ یا بارخور', 'دور تجهیز', 'وضعیت']
-            df_display = eq_data[display_cols].copy()
-            # فرمت‌بندی واحدها
-            df_display['دمای تجهیز'] = df_display['دمای تجهیز'].apply(lambda x: f"{x}°C" if pd.notna(x) and x != "-" else "-")
-            df_display['تناژ یا بارخور'] = df_display['تناژ یا بارخور'].apply(lambda x: f"{x} t/h" if pd.notna(x) and x != "-" else "-")
-            df_display['دور تجهیز'] = df_display['دور تجهیز'].apply(lambda x: f"{x} RPM" if pd.notna(x) and x != "-" else "-")
-            # استایل‌دهی رنگی
-            styled_df = df_display.style.format({
-                'عمودی': "{:.1f}", 'افقی': "{:.1f}", 'محوری': "{:.1f}"
-            }, na_rep="-").map(color_vibration, subset=['عمودی', 'افقی', 'محوری']).map(color_status_text, subset=['وضعیت'])
-            st.dataframe(styled_df, use_container_width=True, hide_index=True)
-            st.write("---")
-st.caption("تمامی حقوق متعلق به شرکت فاز فیدار پارسیان می‌باشد.")
+    selected_lines = st.sidebar.multiselect("فیلتر خط تولید", all_lines, default=all_lines)
+    filtered_df = df[df['خط تولید'].isin(selected_lines)]
+    # --- بخش اول: گزارش ماهانه ---
+    if app_mode == "📊 گزارش ماهانه":
+        st.header("🔍 وضعیت لحظه‌ای تجهیزات")
+        all_dates = filtered_df['تاریخ'].unique().tolist()
+        selected_date = st.selectbox("📅 انتخاب تاریخ گزارش", all_dates[-1:] if all_dates else [])
+        monthly_df = filtered_df[filtered_df['تاریخ'] == selected_date]
+        for line in selected_lines:
+            line_data = monthly_df[monthly_df['خط تولید'] == line]
+            if not line_data.empty:
+                st.subheader(f"🏢 خط تولید: {line}")
+                for eq in line_data['عنوان تجهیز'].unique():
+                    eq_data = line_data[line_data['عنوان تجهیز'] == eq]
+                    col_t, col_i = st.columns([4, 1])
+                    with col_t: st.write(f"📦 *تجهیز:* {eq}")
+                    with col_i:
+                        img_url = eq_data['تصویر تجهیز'].iloc[0]
+                        if pd.notna(img_url) and str(img_url).startswith('http'):
+                            st.image(img_url, width=80)
+                    display_cols = ['محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'دور تجهیز', 'تناژ یا بارخور', 'وضعیت', 'اقدام اصلاحی']
+                    st.dataframe(eq_data[display_cols].style.map(color_vibration, subset=['عمودی', 'افقی', 'محوری']), use_container_width=True, hide_index=True)
+                    st.write("---")
+    # --- بخش دوم: تحلیل روند ---
+    elif app_mode == "📈 تحلیل روند و پرونده تجهیز":
+        st.header("📂 پرونده دیجیتال و تحلیل روند تجهیزات")
+        all_eqs = filtered_df['عنوان تجهیز'].unique().tolist()
+        if all_eqs:
+            selected_eq = st.selectbox("🔍 انتخاب تجهیز برای تحلیل سالانه", all_eqs)
+            eq_history = filtered_df[filtered_df['عنوان تجهیز'] == selected_eq].sort_values('تاریخ')
+            if not eq_history.empty:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['عمودی'], name='عمودی', line=dict(color='blue', width=3)))
+                fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['افقی'], name='افقی', line=dict(color='green', width=3)))
+                fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['محوری'], name='محوری', line=dict(color='red', width=3)))
+                # نمایش نقاط اقدامات (مثل تعویض بلبرینگ یا هاردفیسینگ) روی نمودار
+                events = eq_history[eq_history['اقدام اصلاحی'].notna() & (eq_history['اقدام اصلاحی'] != "")]
+                if not events.empty:
+                    fig.add_trace(go.Scatter(x=events['تاریخ'], y=events['عمودی'], mode='markers+text', 
+                                             text=events['اقدام اصلاحی'], textposition="top center",
+                                             marker=dict(color='orange', size=14, symbol='diamond'), name='اقدامات تعمیراتی'))
+                fig.update_layout(title=f"روند تغییرات ارتعاشات {selected_eq} در طول سال", xaxis_title="تاریخ", yaxis_title="مقدار ارتعاش", template="plotly_white")
+                st.plotly_chart(fig, use_container_width=True)
+                st.subheader("📝 تاریخچه فنی و اقدامات ثبت شده")
+                st.table(eq_history[['تاریخ', 'محل اندازه گیری', 'دور تجهیز', 'تناژ یا بارخور', 'اقدام اصلاحی', 'هزینه', 'توضیحات']])
+            else:
+                st.warning("داده‌ای برای این تجهیز یافت نشد.")
+        else:
+            st.warning("هیچ تجهیزی در داده‌ها یافت نشد.")
+    # --- بخش سوم: گزارش مالی ---
+    elif app_mode == "💰 گزارش مالی و تعمیرات":
+        st.header("💸 تحلیل هزینه‌ها و تجهیزات پردردسر")
+        total_cost = filtered_df['هزینه'].sum()
+        st.metric("مجموع هزینه‌های تعمیراتی ثبت شده", f"{total_cost:,.0f} تومان")
+        st.subheader("🔝 تجهیزات پرهزینه (Bad Actors)")
+        cost_per_eq = filtered_df.groupby('عنوان تجهیز')['هزینه'].sum().sort_values(ascending=False).reset_index()
+        if not cost_per_eq.empty:
+            st.bar_chart(cost_per_eq.set_index('عنوان تجهیز'))
+st.caption("تمامی حقوق متعلق به شرکت فاز فیدار پارسیان می‌باشد. | طراحی و توسعه: مهندس هادی زندیه")

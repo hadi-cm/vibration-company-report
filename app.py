@@ -2,20 +2,63 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-# تنظیمات صفحه
-st.set_page_config(page_title="سامانه جامع پایش وضعیت - فیدارفارسیان", layout="wide")
+# --- ۱. تنظیمات اولیه صفحه ---
+st.set_page_config(page_title="سامانه جامع پایش وضعیت - فیدارفارسیان", layout="wide", page_icon="🛠️")
 
-# --- استایل‌های CSS ---
+# --- ۲. سیستم تایید ایمیل (امنیت در ابتدای برنامه) ---
+def check_email_access():
+    # لیست ایمیل‌های مجاز برای ورود
+    allowed_emails = [
+        "alireza76ir@gmail.com",  # ایمیل ناظر (جناب آقای علیرضا)
+        # هر ایمیل جدیدی را به همین شکل در خط بعدی اضافه کنید (مثلاً "test@gmail.com",)
+    ]
+
+    if "authenticated" not in st.session_state:
+        st.session_state["authenticated"] = False
+
+    if not st.session_state["authenticated"]:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("<h2 style='text-align: center; color: #2c3e50;'>🔐 ورود به سامانه پایش وضعیت</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center;'>لطفاً ایمیل خود را وارد نمایید تا دسترسی شما بررسی شود.</p>", unsafe_allow_html=True)
+
+            user_email = st.text_input("ایمیل شما:", placeholder="example@gmail.com").strip().lower()
+
+            if st.button("بررسی دسترسی و ورود"):
+                if user_email in allowed_emails:
+                    st.session_state["authenticated"] = True
+                    st.success("دسترسی تایید شد. در حال ورود...")
+                    st.rerun()
+                else:
+                    st.error("متاسفیم، ایمیل شما در لیست مجاز نیست. لطفاً با مهندس زندیه هماهنگ نمایید.")
+        return False
+    return True
+
+# اجرای بررسی دسترسی
+if not check_email_access():
+    st.stop()
+
+# =============================================================================
+# از اینجا به بعد، بدنه اصلی سامانه مهندس هادی شروع می‌شود
+# =============================================================================
+
+# --- ۳. استایل‌های CSS ---
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap');
+    html, body, [class=" css"]  {
+        font-family: 'Vazirmatn', sans-serif !important;
+        direction: rtl;
+        text-align: right;
+    }
     .main { text-align: right; }
     .header-text { text-align: center; width: 100%; }
     .stDataFrame { text-align: right; }
     div[data-testid="stExpander"] { text-align: right; }
     </style>
     """, unsafe_allow_html=True)
-
-# --- هدر (کارفرما راست - من چپ) ---
+# --- ۴. هدر (کارفرما راست - من چپ) ---
 col_me, col_title, col_client = st.columns([1, 3, 1])
 with col_client:
     try: st.image("client_logo.png", width=130)
@@ -26,12 +69,9 @@ with col_title:
 with col_me:
     try: st.image("my_logo.png", width=130)
     except: st.info("لوگوی مهندس هادی")
-
 st.divider()
-
-# --- بارگذاری داده‌ها ---
+# --- ۵. بارگذاری داده‌ها ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
-
 @st.cache_data(ttl=60)
 def load_data():
     try:
@@ -39,7 +79,6 @@ def load_data():
         df.columns = ['تاریخ', 'خط تولید', 'واحد', 'عنوان تجهیز', 'تصویر تجهیز', 'محل اندازه گیری', 'عمودی', 'افقی', 'محوری', 'واحد اندازه گیری', 'دور تجهیز', 'دمای تجهیز', 'تناژ یا بارخور', 'توضیحات', 'وضعیت', 'اقدام اصلاحی', 'هزینه']
         df = df[df['تاریخ'].astype(str) != 'تاریخ']
         df[['تاریخ', 'خط تولید', 'عنوان تجهیز']] = df[['تاریخ', 'خط تولید', 'عنوان تجهیز']].ffill()
-        
         numeric_cols = ['عمودی', 'افقی', 'محوری', 'دور تجهیز', 'دمای تجهیز', 'تناژ یا بارخور', 'هزینه']
         for col in numeric_cols:
             if col in df.columns:
@@ -48,34 +87,26 @@ def load_data():
     except Exception as e:
         st.error(f"خطا در بارگذاری داده‌ها: {e}")
         return None
-
 def color_vibration(val):
     if not isinstance(val, (int, float)) or val == 0: return ''
     if val > 7.2: return 'background-color: #ffcccc; color: black'
     if val >= 4.7: return 'background-color: #ffffcc; color: black'
     return ''
-
 df = load_data()
-
 if df is not None:
     st.sidebar.header("🧭 منوی مدیریت سامانه")
     app_mode = st.sidebar.selectbox("انتخاب بخش", ["📊 تحلیل مقایسه‌ای تجهیزات", "📈 تحلیل روند و پرونده تجهیز", "💰 گزارش مالی و تعمیرات"])
-    
     all_lines = df['خط تولید'].dropna().unique().tolist()
     selected_line = st.sidebar.selectbox("🏢 انتخاب واحد/خط تولید", all_lines)
-    
     line_df = df[df['خط تولید'] == selected_line]
-
     # --- بخش اول: تحلیل مقایسه‌ای تاریخچه ---
     if app_mode == "📊 تحلیل مقایسه‌ای تجهیزات":
         st.header(f"🔍 تحلیل تاریخچه ارتعاشات - {selected_line}")
         st.info("در این بخش، تاریخ‌های مختلف در سطرها و نقاط اندازه‌گیری در ستون‌ها قرار گرفته‌اند.")
-        
         all_eqs_in_line = line_df['عنوان تجهیز'].unique().tolist()
         if all_eqs_in_line:
             selected_eq = st.selectbox("📦 انتخاب تجهیز مورد نظر", all_eqs_in_line)
             eq_data = line_df[line_df['عنوان تجهیز'] == selected_eq].sort_values('تاریخ')
-            
             if not eq_data.empty:
                 pivot_df = eq_data.pivot_table(
                     index='تاریخ', 
@@ -83,21 +114,18 @@ if df is not None:
                     values='عمودی',
                     aggfunc='first'
                 ).fillna(0)
-                
                 st.subheader(f"📅 جدول مقایسه‌ای تاریخچه ارتعاشات: {selected_eq}")
                 st.dataframe(
-    pivot_df.style.map(color_vibration).format("{:.2f}"), 
-    use_container_width=True
+                    pivot_df.style.map(color_vibration).format("{:.2f}"), 
+                    use_container_width=True
                 )
-                
                 img_url = eq_data['تصویر تجهیز'].iloc[0]
                 if pd.notna(img_url) and str(img_url).startswith('http'):
                     st.image(img_url, caption=f"تصویر {selected_eq}", width=250)
             else:
                 st.warning("داده‌ای برای این تجهیز یافت نشد.")
         else:
-            st.warning("هیچ تجهیزی در این خط تولید یافت نشد.")
-
+            st.warning("هیچ تجهیزاتی در این خط تولید یافت نشد.")
     # --- بخش دوم: تحلیل روند و پرونده دیجیتال ---
     elif app_mode == "📈 تحلیل روند و پرونده تجهیز":
         st.header("📂 پرونده دیجیتال و تحلیل روند تجهیزات")
@@ -110,19 +138,17 @@ if df is not None:
                 fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['عمودی'], name='عمودی', line=dict(color='blue', width=3)))
                 fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['افقی'], name='افقی', line=dict(color='green', width=3)))
                 fig.add_trace(go.Scatter(x=eq_history['تاریخ'], y=eq_history['محوری'], name='محوری', line=dict(color='red', width=3)))
-                
                 events = eq_history[eq_history['اقدام اصلاحی'].notna() & (eq_history['اقدام اصلاحی'] != "")]
                 if not events.empty:
                     fig.add_trace(go.Scatter(x=events['تاریخ'], y=events['عمودی'], mode='markers+text', 
                                              text=events['اقدام اصلاحی'], textposition="top center",
                                              marker=dict(color='orange', size=14, symbol='diamond'), name='اقدامات تعمیراتی'))
-                
                 fig.update_layout(title=f"روند تغییرات ارتعاشات {selected_eq}", xaxis_title="تاریخ", yaxis_title="مقدار ارتعاش", template="plotly_white")
                 st.plotly_chart(fig, use_container_width=True)
-                
                 st.subheader("📝 تاریخچه فنی و اقدامات ثبت شده")
-                st.dataframe(eq_history[['تاریخ', 'م محل اندازه گیری', 'دور تجهیز', 'تناژ یا بارخور', 'اقدام اصلاحی', 'هزینه', 'توضیحات']], hide_index=True, use_container_width=True)
-
+                st.dataframe(eq_history[['تاریخ', 'محل اندازه گیری', 'دور تجهیز', 'تناژ یا بارخور', 'اقدام اصلاحی', 'هزینه', 'توضیحات']], hide_index=True, use_container_width=True)
+        else:
+            st.warning("تجهیزی برای تحلیل یافت نشد.")
     # --- بخش سوم: گزارش مالی ---
     elif app_mode == "💰 گزارش مالی و تعمیرات":
         st.header(f"💸 تحلیل هزینه‌ها - {selected_line}")
@@ -132,5 +158,4 @@ if df is not None:
         cost_per_eq = line_df.groupby('عنوان تجهیز')['هزینه'].sum().sort_values(ascending=False).reset_index()
         if not cost_per_eq.empty:
             st.bar_chart(cost_per_eq.set_index('عنوان تجهیز'))
-
 st.caption("تمامی حقوق متعلق به شرکت فیدار پارسیان می‌باشد. | طراحی و توسعه: مهندس هادی زندیه")

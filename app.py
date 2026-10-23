@@ -86,8 +86,8 @@ if df is not None:
                 
                 st.subheader(f"📅 جدول مقایسه‌ای تاریخچه ارتعاشات: {selected_eq}")
                 st.dataframe(
-                    pivot_df.style.map(color_vibration), 
-                    use_container_width=True
+    pivot_df.style.map(color_vibration).format("{:.2f}"), 
+    use_container_width=True
                 )
                 
                 img_url = eq_data['تصویر تجهیز'].iloc[0]

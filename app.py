@@ -77,7 +77,6 @@ if df is not None:
             eq_data = line_df[line_df['عنوان تجهیز'] == selected_eq].sort_values('تاریخ')
             
             if not eq_data.empty:
-                # ایجاد جدول مقایسه‌ای امن (بدون تداخل ایندکس)
                 pivot_df = eq_data.pivot_table(
                     index='تاریخ', 
                     columns='محل اندازه گیری', 
@@ -91,7 +90,6 @@ if df is not None:
                     use_container_width=True
                 )
                 
-                # نمایش تصویر تجهیز
                 img_url = eq_data['تصویر تجهیز'].iloc[0]
                 if pd.notna(img_url) and str(img_url).startswith('http'):
                     st.image(img_url, caption=f"تصویر {selected_eq}", width=250)
@@ -123,7 +121,7 @@ if df is not None:
                 st.plotly_chart(fig, use_container_width=True)
                 
                 st.subheader("📝 تاریخچه فنی و اقدامات ثبت شده")
-                st.dataframe(eq_history[['تاریخ', 'محل اندازه گیری', 'دور تجهیز', 'تناژ یا بارخور', 'اقدام اصلاحی', 'هزینه', 'توضیحات']], hide_index=True, use_container_width=True)
+                st.dataframe(eq_history[['تاریخ', 'م محل اندازه گیری', 'دور تجهیز', 'تناژ یا بارخور', 'اقدام اصلاحی', 'هزینه', 'توضیحات']], hide_index=True, use_container_width=True)
 
     # --- بخش سوم: گزارش مالی ---
     elif app_mode == "💰 گزارش مالی و تعمیرات":
@@ -135,4 +133,4 @@ if df is not None:
         if not cost_per_eq.empty:
             st.bar_chart(cost_per_eq.set_index('عنوان تجهیز'))
 
-st.caption("تمامی حقوق متعلق به شرکت فیدار پارسیان می‌باشد. | طراحی و توسعه: مهندس هادی زندیه
+st.caption("تمامی حقوق متعلق به شرکت فیدار پارسیان می‌باشد. | طراحی و توسعه: مهندس هادی زندیه")

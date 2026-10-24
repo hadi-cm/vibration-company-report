@@ -61,15 +61,11 @@ def check_email_access():
 if not check_email_access():
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
     st.stop()
-# --- بارگذاری داده‌ها (نسخه جدید و ضد خطا) ---
-# شناسه شیت شماست
-SHEET_ID = "1H4YlzU7ZNH27YNzE6NMPOH-E81_Xns"
-# لینک مستقیم برای دانلود به صورت CSV (پایدارترین حالت)
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+# --- بارگذاری داده‌ها با لینک Publish شده ---
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT14vONsowudctVbskGkkSyQNqkkGZ8AuiyKO9UkEe-8FSBZemWkR4q5DSAhpXEQwQkgcUQy44Vvqx/pub?gid=0&single=true&output=csv"
 @st.cache_data(ttl=600) 
 def load_data():
     try:
-        # خواندن مستقیم از لینک اکسپورت گوگل
         df = pd.read_csv(SHEET_URL)
         if not df.empty:
             df['عنوان تجهیز'] = df['عنوان تجهیز'].astype(str)
@@ -105,5 +101,5 @@ if not df.empty:
         st.warning("داده‌ای برای این تجهیز یافت نشد.")
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
 else:
-    st.error("داده‌ای از گوگل شیت دریافت نشد. لطفاً دسترسی Share را روی Anyone with the link قرار دهید.")
+    st.error("داده‌ای از گوگل شیت دریافت نشد. لطفاً از صحت لینک اطمینان حاصل کنید.")
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)

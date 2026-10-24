@@ -18,7 +18,6 @@ st.markdown("""
         direction: rtl;
         text-align: right;
     }
-    /* استایل مخصوص فوتر برای نمایش نام شرکت و مهندس هادی */
     .footer {
         position: fixed;
         left: 0;
@@ -60,19 +59,24 @@ def check_email_access():
     return True
 # --- اجرای بررسی دسترسی ---
 if not check_email_access():
-    # نمایش نام شرکت و مهندس هادی در صفحه ورود
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
     st.stop()
-# --- بارگذاری داده‌ها از گوگل شیت ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4YlzU7ZNH27YNzE6NMPOH-E81_Xns/export?format=csv"
-@st.cache_data
+# --- بارگذاری داده‌ها (نسخه جدید و ضد خطا) ---
+# شناسه شیت شماست
+SHEET_ID = "1H4YlzU7ZNH27YNzE6NMPOH-E81_Xns"
+# لینک مستقیم برای دانلود به صورت CSV (پایدارترین حالت)
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+@st.cache_data(ttl=600) 
 def load_data():
     try:
+        # خواندن مستقیم از لینک اکسپورت گوگل
         df = pd.read_csv(SHEET_URL)
-        df = df.dropna(subset=['عنوان تجهیز'])
+        if not df.empty:
+            df['عنوان تجهیز'] = df['عنوان تجهیز'].astype(str)
+            df = df.dropna(subset=['عنوان تجهیز'])
         return df
     except Exception as e:
-        st.error(f"خطا در بارگذاری داده‌ها: {e}")
+        st.error(f"⚠️ خطا در اتصال به داده‌ها: {e}")
         return pd.DataFrame()
 df = load_data()
 if not df.empty:
@@ -99,8 +103,7 @@ if not df.empty:
         st.dataframe(final_df, use_container_width=True)
     else:
         st.warning("داده‌ای برای این تجهیز یافت نشد.")
-    # --- نمایش نام شرکت و مهندس هادی در پایین صفحه (Footer) ---
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
 else:
-    st.error("داده‌ای از گوگل شیت دریافت نشد.")
+    st.error("داده‌ای از گوگل شیت دریافت نشد. لطفاً دسترسی Share را روی Anyone with the link قرار دهید.")
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)

@@ -7,14 +7,14 @@ st.set_page_config(page_title="سامانه جامع پایش وضعیت - فی�
 
 # --- ۲. سیستم تایید ایمیل ---
 def check_email_access():
-allowed_emails = ["vah.rezaei@gmail.com", "alireza76ir@gmail.com", "hamidreza.doroud@gmail.com", "masoud.sa.1989823@gmail.com", "tehrancement@gmail.com"]
+    allowed_emails = ["vah.rezaei@gmail.com", "alireza76ir@gmail.com", "hamidreza.doroud@gmail.com", "masoud.sa.1989823@gmail.com", "tehrancement@gmail.com"]
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
     if not st.session_state["authenticated"]:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown("<h2 style='text-align: center; color: #2c3e50;'>🔐 ورود به سامانه پایش وضعیت</h2>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #2c3e50;'>ورود به سامانه پایش وضعیت 🧐</h2>", unsafe_allow_html=True)
             user_email = st.text_input("ایمیل شما:").strip().lower()
             if st.button("بررسی دسترسی و ورود"):
                 if user_email in allowed_emails:
@@ -24,7 +24,6 @@ allowed_emails = ["vah.rezaei@gmail.com", "alireza76ir@gmail.com", "hamidreza.do
                     st.error("ایمیل شما در لیست مجاز نیست.")
         return False
     return True
-
 if not check_email_access():
     st.stop()
 

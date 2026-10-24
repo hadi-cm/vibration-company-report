@@ -64,7 +64,7 @@ if not check_email_access():
     st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
     st.stop()
 # --- بارگذاری داده‌ها از گوگل شیت ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4YlzU7ZNH27YNzE6NMPOH-E81_Xns/gviz/tq?tqx=out:csv"
+SHEET_URL = "https://docs.google.com/spreadsheets/d/1H4YlzU7ZNH27YNzE6NMPOH-E81_Xns/export?format=csv"
 @st.cache_data
 def load_data():
     try:

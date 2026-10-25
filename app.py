@@ -1,17 +1,16 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 
 # --- 1. تنظیمات کلی صفحه (Page Configuration) ---
 st.set_page_config(
-    page_title="سامانه جامع پایش وضعیت ارتعاشات", 
+    page_title="سامانه جامع پایش ارتعاشات", 
     layout="wide", 
     page_icon="⚙️",
     initial_sidebar_state="expanded"
 )
 
-# --- 2. استایل‌های پیشرفته CSS برای ظاهر حرفه‌ای و فارسی ---
+# --- 2. استایل‌های CSS برای راست‌چین و فونت فارسی ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap');
@@ -40,12 +39,7 @@ st.markdown("""
         padding: 20px;
         border-radius: 15px;
         border: 1px solid #dee2e6;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         text-align: center;
-    }
-    .stDataFrame {
-        border: 1px solid #dee2e6;
-        border-radius: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -74,69 +68,73 @@ def check_email_access():
                     st.error("❌ متأسفیم، ایمیل شما در لیست دسترسی‌ها نیست.")
         return False
     return True
-# اجرای چک کردن دسترسی
 if not check_email_access():
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
     st.stop()
-# --- 4. بارگذاری هوشمند داده‌ها (Data Loading) ---
-# استفاده از هر دو متد برای جلوگیری از ارور 404
-SHEET_URL_PUBLISH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTI4vONsowudctVbskGkkSyQNqkkGZ8AuiykO9UKeE-8FSBZemWkR4q5DSAhpXEqwQkgsCUQy44Vvqx/pub?gid=0&single=true&output=csv"
-SHEET_ID = "1H4Yf3ilu7Zhl7YZnsE6NMPOfH-Eil98_sE0_81uXns"
-SHEET_URL_DIRECT = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+# --- 4. بارگذاری هوشمند داده‌ها ---
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT14vONsowudctVbskGkkSyQNqkkGZ8AuiyKO9UkEe-8FSBZemWkR4q5DSAhpXEQwQkgcUQy44Vvqx/pub?gid=0&single=true&output=csv"
 @st.cache_data(ttl=60)
 def load_data():
-    # تلاش اول: لینک Publish
     try:
-        df = pd.read_csv(SHEET_URL_PUBLISH)
+        df = pd.read_csv(SHEET_URL)
+        # پاکسازی نام ستون‌ها از هرگونه فاصله اضافی
         df.columns = df.columns.str.strip()
         return df
-    except:
-        # تلاش دوم: لینک Direct Export
-        try:
-            df = pd.read_csv(SHEET_URL_DIRECT)
-            df.columns = df.columns.str.strip()
-            return df
-        except Exception as e:
-            st.error(f"⚠️ خطای بحرانی در اتصال به گوگل‌شیت: {e}")
-            return pd.DataFrame()
+    except Exception as e:
+        st.error(f"⚠️ خطا در دریافت داده‌ها از گوگل‌شیت: {e}")
+        return pd.DataFrame()
 df = load_data()
-# --- 5. بدنه اصلی داشبورد (Main Dashboard) ---
+# --- 5. بدنه اصلی و فیلترهای سلسله‌مراتبی ---
 if not df.empty:
-    # --- سایدبار (Sidebar) ---
     with st.sidebar:
         st.markdown("### 🛠️ تنظیمات گزارش")
-        # شناسایی ستون‌ها
-        line_col = 'خط تولید' if 'خط تولید' in df.columns else df.columns[1]
-        equip_col = 'عنوان تجهیز' if 'عنوان تجهیز' in df.columns else df.columns[2]
-        # فیلتر خط تولید
-        lines = sorted(df[line_col].dropna().unique().tolist())
-        selected_line = st.selectbox("انتخاب خط تولید:", lines)
-        # فیلتر تجهیز (وابسته به خط تولید)
-        filtered_equips = df[df[line_col] == selected_line][equip_col].dropna().unique().tolist()
-        selected_equip = st.selectbox("انتخاب تجهیز:", sorted(filtered_equips))
+        # تعریف نام دقیق ستون‌ها (مطابق با شیت شما)
+        col_line = 'خط تولید'
+        col_unit = 'واحد'
+        col_equip = 'عنوان تجهیز'
+        # بررسی وجود ستون‌ها برای جلوگیری از کرش
+        available_cols = df.columns.tolist()
+        if all(c in available_cols for c in [col_line, col_unit, col_equip]):
+            # ۱. فیلتر خط تولید
+            lines = sorted(df[col_line].dropna().unique().tolist())
+            selected_line = st.selectbox("۱. انتخاب خط تولید:", lines)
+            # ۲. فیلتر واحد (وابسته به خط تولید)
+            units = sorted(df[df[col_line] == selected_line][col_unit].dropna().unique().tolist())
+            selected_unit = st.selectbox("۲. انتخاب واحد:", units)
+            # ۳. فیلتر تجهیز (وابسته به خط و واحد)
+            equips = sorted(df[(df[col_line] == selected_line) & (df[col_unit] == selected_unit)][col_equip].dropna().unique().tolist())
+            selected_equip = st.selectbox("۳. انتخاب تجهیز:", equips)
+        else:
+            st.error("❌ نام ستون‌های 'خط تولید'، 'واحد' یا 'عنوان تجهیز' در شیت یافت نشد.")
+            st.stop()
         st.markdown("---")
-        if st.button("🔄 به‌روزرسانی لحظه‌ای داده‌ها"):
+        if st.button("🔄 به‌روزرسانی لحظه‌ای"):
             st.cache_data.clear()
             st.rerun()
-        st.info("این سامانه به صورت مستقیم با گوگل‌شیت متصل است.")
-    # فیلتر کردن داده‌های نهایی
-    final_df = df[(df[line_col] == selected_line) & (df[equip_col] == selected_equip)]
-    # --- نمایش عنوان و شاخص‌ها (KPIs) ---
-    st.title(f"📊 پایش وضعیت ارتعاشات: {selected_equip}")
-    kpi1, kpi2, kpi3 = st.columns(3)
+    # اعمال فیلترهای نهایی
+    final_df = df[(df[col_line] == selected_line) & 
+                  (df[col_unit] == selected_unit) & 
+                  (df[col_equip] == selected_equip)].copy()
+    # --- 6. نمایش داشبورد ---
+    st.title(f"📊 پایش وضعیت: {selected_equip}")
+    st.markdown(f"**واحد:** {selected_unit}  |  *خط تولید:* {selected_line}")
+    kpi1, kpi2 = st.columns(2)
     with kpi1:
         st.metric("تعداد نقاط پایش", len(final_df))
     with kpi2:
-        st.metric("خط تولید", selected_line)
-    with kpi3:
         st.metric("وضعیت اتصال", "پایدار ✅")
-    # --- بخش نمودارهای تحلیلی ---
-    st.markdown("### 📈 تحلیل گرافیکی مقادیر")
-    # شناسایی ستون‌های عددی برای رسم نمودار
+    st.markdown("### 📈 تحلیل ارتعاشات")
+    # شناسایی خودکار ستون‌های عددی برای نمودار
     numeric_cols = final_df.select_dtypes(include=['number']).columns.tolist()
     if numeric_cols:
-        # شناسایی ستون موقعیت (مثلاً P1, P2...)
-        point_col = df.columns[5] if len(df.columns) > 5 else df.columns[0]
+        # پیدا کردن ستون شناسنامه نقطه (اولین ستون غیرعددی یا ستون مشخص شده)
+        # معمولاً ستون اول یا ستونی که نامش 'نقطه' یا 'مکان' است
+        point_col = None
+        for col in df.columns:
+            if col not in numeric_cols and col not in [col_line, col_unit, col_equip]:
+                point_col = col
+                break
+        if point_col is None: point_col = df.columns[0]
         fig = px.bar(
             final_df, 
             x=point_col, 
@@ -144,24 +142,15 @@ if not df.empty:
             barmode='group', 
             text_auto='.1f',
             color_discrete_sequence=px.colors.qualitative.Pastel,
-            title=f"مقایسه ارتعاشات در نقاط مختلف برای {selected_equip}"
+            title=f"مقادیر ارتعاشات در نقاط مختلف تجهیز {selected_equip}"
         )
-        fig.update_layout(xaxis_title="نقاط اندازه‌گیری", yaxis_title="مقدار (mm/s)")
+        fig.update_layout(xaxis_title="نقطه اندازه‌گیری", yaxis_title="مقدار (mm/s)")
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("داده‌های عددی برای رسم نمودار یافت نشد.")
-    # --- بخش جدول داده‌ها ---
-    st.markdown("### 📋 جزئیات کامل داده‌ها")
+        st.warning("⚠️ داده عددی برای رسم نمودار یافت نشد.")
+    st.markdown("### 📋 جزئیات داده‌ها")
     st.dataframe(final_df, use_container_width=True)
 else:
-    # نمایش راهنما در صورت نبود داده
-    st.error("❌ متأسفانه داده‌ای از گوگل‌شیت دریافت نشد.")
-    st.markdown("""
-    *لطفاً موارد زیر را بررسی کنید:
-    1. در گوگل‌شیت به مسیر `File` ➡️ `Share` ➡️ `Publish to web` بروید.
-    2. فرمت را روی CSV قرار داده و دکمه Publish را بزنید.
-    3. در بخش `Share` اصلی، دسترسی را روی Anyone with the link قرار دهید.
-    """)
-
-# --- 6. فوتر (Footer) ---
+    st.error("❌ داده‌ای دریافت نشد. لطفاً اتصال اینترنت یا لینک گوگل‌شیت را بررسی کنید.")
+# --- 7. فوتر ---
 st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)

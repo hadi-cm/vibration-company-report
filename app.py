@@ -5,7 +5,7 @@ import plotly.express as px
 # --- تنظیمات صفحه ---
 st.set_page_config(page_title="سامانه جامع پایش ارتعاشات", layout="wide", page_icon="⚙️")
 
-# --- استایل CSS برای ظاهر فارسی و فوتر ---
+# --- استایل CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap');
@@ -36,24 +36,29 @@ def check_email_access():
 if not check_email_access():
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
     st.stop()
-# --- بارگذاری داده‌ها با شناسه مستقیم ---
-SHEET_ID = "1H4Yf3ilu7Zhl7YZnsE6NMPOfH-Eil98_sE0_81uXns"
-SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
-@st.cache_data(ttl=60)
+# --- روش استاندارد خواندن از گوگل‌شیت (با مدیریت خطای کامل) ---
+# لطفاً در گوگل‌شیت از منوی File گزینه Share و سپس Publish to web را بزنید و لینک CSV آن را اینجا قرار دهید:
+SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT14vONsowudctVbskGkkSyQNqkkGZ8AuiyKO9UkEe-8FSBZemWkR4q5DSAhpXEQwQkgcUQy44Vvqx/pub?gid=0&single=true&output=csv"
+@st.cache_data(ttl=30)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
         df.columns = df.columns.str.strip()
         return df
     except Exception as e:
-        st.error(f"⚠️ خطای اتصال: {e}")
-        return pd.DataFrame()
+        # اگر لینک پابلیش خطا داد، از روش جایگزین با شناسه استفاده می‌کنیم
+        try:
+            alt_url = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu7Zhl7YZnsE6NMPOfH-Eil98_sE0_81uXns/export?format=csv&gid=0"
+            df = pd.read_csv(alt_url)
+            df.columns = df.columns.str.strip()
+            return df
+        except Exception as ex:
+            return pd.DataFrame()
 df = load_data()
 # --- نمایش داشبورد ---
 if not df.empty:
     with st.sidebar:
         st.header("🛠️ فیلترهای گزارش")
-        # تشخیص خودکار ستون‌ها
         line_col = 'خط تولید' if 'خط تولید' in df.columns else df.columns[1]
         equip_col = 'عنوان تجهیز' if 'عنوان تجهیز' in df.columns else df.columns[2]
         lines = sorted(df[line_col].dropna().unique().tolist())
@@ -63,10 +68,8 @@ if not df.empty:
         if st.button("🔄 به‌روزرسانی داده‌ها"):
             st.cache_data.clear()
             st.rerun()
-    # فیلتر کردن داده نهایی
     final_df = df[(df[line_col] == selected_line) & (df[equip_col] == selected_equip)]
     st.title(f"📊 گزارش ارتعاشات: {selected_equip}")
-    # --- نمودار میله‌ای ---
     numeric_cols = final_df.select_dtypes(include=['number']).columns.tolist()
     if numeric_cols:
         point_col = df.columns[5] if len(df.columns) > 5 else df.columns[0]
@@ -74,9 +77,9 @@ if not df.empty:
                      barmode='group', title="تحلیل مقایسه‌ای نقاط اندازه‌گیری",
                      text_auto='.1f', color_discrete_sequence=px.colors.qualitative.Set2)
         st.plotly_chart(fig, use_container_width=True)
-    # --- نمایش جدول ---
     st.subheader("📋 جزئیات داده‌های ثبت شده")
     st.dataframe(final_df, use_container_width=True)
 else:
-    st.warning("مهندس هادی عزیز، داده‌ای یافت نشد. لطفاً دسترسی Share گوگل‌شیت را بررسی کنید.")
+    st.error("⚠️ خطا در خواندن داده‌ها از گوگل‌شیت.")
+    st.info("💡 راهنما: در گوگل‌شیت خود به مسیر File > Share > Publish to web بروید، گزینهنرم‌افزار را روی CSV بگذارید، دکمه Publish را بزنید و مطمئن شوید دسترسی فایل روی Anyone with the link است.")
 st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)

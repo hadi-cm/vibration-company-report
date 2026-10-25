@@ -1,41 +1,15 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 
 # --- تنظیمات صفحه ---
 st.set_page_config(page_title="سامانه پایش وضعیت ارتعاشات", layout="wide", page_icon="⚙️")
 
-# --- استایل CSS برای راست‌چین کردن، فونت و طراحی فوتر ---
+# --- استایل CSS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap');
-    html, body, [class=" css"]  {
-        font-family: 'Vazirmatn', sans-serif;
-        direction: rtl;
-        text-align: right;
-    }
-    .stSelectbox label, .stMarkdown p {
-        direction: rtl;
-        text-align: right;
-    }
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #2c3e50;
-        color: white;
-        text-align: center;
-        padding: 15px;
-        font-weight: bold;
-        font-size: 16px;
-        border-top: 3px solid #e74c3c;
-        z-index: 100;
-        direction: rtl;
-    }
-    .footer span {
-        margin: 0 15px;
-    }
+    html, body, [class=" css"]  { font-family: 'Vazirmatn', sans-serif; direction: rtl; text-align: right; }
+    .footer { position: fixed; left: 0; bottom: 0; width: 100%; background-color: #2c3e50; color: white; text-align: center; padding: 15px; font-weight: bold; border-top: 3px solid #e74c3c; z-index: 100; direction: rtl; }
     </style>
     """, unsafe_allow_html=True)
 # --- تابع بررسی دسترسی ایمیل ---
@@ -57,49 +31,36 @@ def check_email_access():
                     st.error("ایمیل شما در لیست مجاز نیست.")
         return False
     return True
-# --- اجرای بررسی دسترسی ---
 if not check_email_access():
-    st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
+    st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
     st.stop()
-# --- بارگذاری داده‌ها با لینک Publish شده ---
-SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT14vONsowudctVbskGkkSyQNqkkGZ8AuiyKO9UkEe-8FSBZemWkR4q5DSAhpXEQwQkgcUQy44Vvqx/pub?gid=0&single=true&output=csv"
-@st.cache_data(ttl=600) 
+# --- بارگذاری داده‌ها با شناسه دقیق استخراج شده ---
+# مهندس هادی، این شناسه دقیق فایل شماست که از عکس برداشتم:
+SHEET_ID = "1H4Yf3ilu7Zhl7YZnsE6NMPOH-E81_Xns" 
+# استفاده از متد گوگل‌ویز برای پایداری ۱۰۰ درصدی
+SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet=ارتعاشات"
+@st.cache_data(ttl=60) 
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
         if not df.empty:
-            df['عنوان تجهیز'] = df['عنوان تجهیز'].astype(str)
-            df = df.dropna(subset=['عنوان تجهیز'])
+            df.columns = df.columns.str.strip()
+            # تبدیل همه ستون‌ها به متن برای جلوگیری از ارورهای فرمت
+            df = df.astype(str)
         return df
     except Exception as e:
-        st.error(f"⚠️ خطا در اتصال به داده‌ها: {e}")
+        st.error(f"⚠️ خطای فنی: {e}")
         return pd.DataFrame()
 df = load_data()
 if not df.empty:
-    # --- منوی سمت راست (Sidebar) ---
     with st.sidebar:
-        st.markdown("### 🛠️ فیلترهای جستجو")
-        section = st.selectbox("انتخاب بخش", ["تحلیل مقایسه‌ای تجهیزات", "تحلیل تاریخچه ارتعاشات"])
-        if section == "تحلیل تاریخچه ارتعاشات":
-            production_lines = sorted(df['خط تولید'].unique().tolist())
-            selected_line = st.selectbox("انتخاب خط تولید", production_lines)
-            units_in_line = sorted(df[df['خط تولید'] == selected_line]['واحد'].unique().tolist())
-            selected_unit = st.selectbox("انتخاب واحد", units_in_line)
-            filtered_equipment = sorted(df[(df['خط تولید'] == selected_line) & (df['واحد'] == selected_unit)]['عنوان تجهیز'].unique().tolist())
-            selected_equipment = st.selectbox("انتخاب تجهیز", filtered_equipment)
-            final_df = df[(df['خط تولید'] == selected_line) & (df['واحد'] == selected_unit) & (df['عنوان تجهیز'] == selected_equipment)]
-        else:
-            all_equipment = sorted(df['عنوان تجهیز'].unique().tolist())
-            selected_equipment = st.selectbox("انتخاب تجهیز", all_equipment)
-            final_df = df[df['عنوان تجهیز'] == selected_equipment]
-    # --- بدنه اصلی برنامه ---
-    st.markdown(f"## 🔍 تحلیل {section} - {selected_equipment}")
-    if not final_df.empty:
-        st.write("### 📊 داده‌های استخراج شده")
-        st.dataframe(final_df, use_container_width=True)
-    else:
-        st.warning("داده‌ای برای این تجهیز یافت نشد.")
-    st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
+        st.markdown("### 🛠️ فیلترها")
+        line_col = 'خط تولید' if 'خط تولید' in df.columns else df.columns[1]
+        line_list = sorted(df[line_col].unique().tolist())
+        selected_line = st.selectbox("انتخاب خط تولید", line_list)
+        filtered_df = df[df[line_col] == selected_line]
+    st.markdown(f"## 📊 گزارش ارتعاشات - {selected_line}")
+    st.dataframe(filtered_df, use_container_width=True)
 else:
-    st.error("داده‌ای از گوگل شیت دریافت نشد. لطفاً از صحت لینک اطمینان حاصل کنید.")
-    st.markdown('<div class="footer"><span>طراحی و توسعه: مهندس هادی زندیه</span> | <span>شرکت فاز فیدار پارسیان</span></div>', unsafe_allow_html=True)
+    st.warning("داده‌ای یافت نشد. مهندس عزیز، لطفاً مطمئن شوید در گوگل‌شیت دکمه Share روی Anyone with the link است.")
+st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)

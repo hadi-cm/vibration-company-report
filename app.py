@@ -80,7 +80,7 @@ if not check_email_access():
     st.stop()
 # --- 4. بارگذاری هوشمند داده‌ها (Data Loading) ---
 # استفاده از هر دو متد برای جلوگیری از ارور 404
-SHEET_URL_PUBLISH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT14vONsowudctVbskGkkSyQNqkkGZ8AuiyKO9UkEe-8FSBZemWkR4q5DSAhpXEQwQkgcUQy44Vvqx/pub?gid=0&single=true&output=csv"
+SHEET_URL_PUBLISH = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTI4vONsowudctVbskGkkSyQNqkkGZ8AuiykO9UKeE-8FSBZemWkR4q5DSAhpXEqwQkgsCUQy44Vvqx/pub?gid=0&single=true&output=csv"
 SHEET_ID = "1H4Yf3ilu7Zhl7YZnsE6NMPOfH-Eil98_sE0_81uXns"
 SHEET_URL_DIRECT = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 @st.cache_data(ttl=60)

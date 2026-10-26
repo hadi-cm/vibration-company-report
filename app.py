@@ -59,6 +59,10 @@ st.markdown("""
         background-color: #f8f9fa; text-align: center; padding: 12px 0;
         font-weight: bold; border-top: 3px solid #2E7D32; z-index: 999;
     }
+    .error-box {
+        background-color: #f8d7da; color: #721c24; padding: 15px;
+        border-radius: 5px; border: 1px solid #f5c6cb; margin-bottom: 20px;
+    }
     </style>
     """, unsafe_allow_html=True)
 st.markdown(f"""
@@ -69,46 +73,48 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال مستقیم و آنلاین به گوگل شیت
+# 3. اتصال آنلاین و سیستم کنترل نام‌ها
 # ==============================================================================
-# آدرس شیت شما
 SHEET_ID = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
-# تبدیل لینک گوگل شیت به لینک مستقیم دانلود CSV
 GOOGLE_SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
-@st.cache_data(ttl=60) # هر ۶۰ ثانیه داده‌ها را به‌روز می‌کند
+@st.cache_data(ttl=60)
 def load_online_data():
     try:
-        # خواندن مستقیم از لینک گوگل شیت
         df = pd.read_csv(GOOGLE_SHEET_URL)
-        # پاک‌سازی نام‌ها
-        if "عنوان تجهیز" in df.columns:
-            df["عنوان تجهیز"] = df["عنوان تجهیز"].astype(str).str.strip()
-        if "واحد" in df.columns:
-            df["واحد"] = df["واحد"].astype(str).str.strip()
-        if "خط تولید" in df.columns:
-            df["خط تولید"] = df["خط تولید"].astype(str).str.strip()
+        # پاک‌سازی اولیه
+        for col in df.columns:
+            df[col] = df[col].astype(str).str.strip()
         return df
     except Exception as e:
-        st.error(f"خطا در اتصال به گوگل شیت: {e}")
+        st.error(f"❌ خطا در اتصال: {e}")
         return None
 df = load_online_data()
 if df is not None:
-    st.success("✅ اتصال آنلاین برقرار شد. داده‌های شما به‌صورت لحظه‌ای به‌روزرسانی می‌شوند!")
-    # --- بخش فیلترها در کشو ---
-    with st.expander("🔍 کلیک کنید تا فیلترهای جستجو باز شود"):
+    # --- سیستم شناسایی نام‌های اشتباه (برای جلوگیری از خرابی ترندها) ---
+    # ما فرض می‌کنیم نام‌های صحیح، نام‌هایی هستند که تکرار شده‌اند یا در لیست اصلی هستند
+    # در اینجا ما بررسی می‌کنیم چه نام‌هایی وارد شده‌اند که با بقیه متفاوت هستند
+    all_eq_names = df["عنوان تجهیز"].unique()
+    all_eq_names = [x for x in all_eq_names if x != 'nan' and x != '']
+    # شناسایی نام‌های مشکوک (مثلاً نام‌هایی که فقط یک بار تکرار شده‌اند و احتمالاً غلط تایپی دارند)
+    name_counts = df["عنوان تجهیز"].value_counts()
+    suspicious_names = name_counts[name_counts == 1].index.tolist()
+    if len(suspicious_names) > 0:
+        st.markdown(f"""<div class="error-box">🛑 <b>هشدار تطبیق نام تجهیزات:</b><br>
+        تعداد {len(suspicious_names)} مورد نام تجهیز شناسایی شد که احتمالاً غلط تایپی دارند یا با نام‌های استاندارد یکی نیستند. 
+        این موارد باعث ایجاد <b>ترندهای جداگانه و اشتباه</b> می‌شوند.<br>
+        <b>موارد مشکوک:</b> {", ".join(suspicious_names)}</div>""", unsafe_allow_html=True)
+    # --- بخش فیلترها ---
+    with st.expander("🔍 فیلترهای جستجو"):
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            all_lines = df["خط تولید"].unique().tolist() if "خط تولید" in df.columns else []
-            all_lines = [str(x) for x in all_lines if x != 'nan']
-            selected_line = st.selectbox("۱- انتخاب خط تولید:", ["همه"] + all_lines)
+            all_lines = [x for x in df["خط تولید"].unique() if x != 'nan']
+            selected_line = st.selectbox("۱- خط تولید:", ["همه"] + all_lines)
         with f_col2:
-            all_units = df["واحد"].unique().tolist() if "واحد" in df.columns else []
-            all_units = [str(x) for x in all_units if x != 'nan']
-            selected_unit = st.selectbox("۲- انتخاب واحد:", ["همه"] + all_units)
+            all_units = [x for x in df["واحد"].unique() if x != 'nan']
+            selected_unit = st.selectbox("۲- واحد:", ["همه"] + all_units)
         with f_col3:
-            all_eq = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
-            all_eq = [str(x) for x in all_eq if x != 'nan']
-            selected_eq = st.selectbox("۳- انتخاب تجهیز:", ["همه"] + all_eq)
+            all_eq = [x for x in df["عنوان تجهیز"].unique() if x != 'nan']
+            selected_eq = st.selectbox("۳- تجهیز:", ["همه"] + all_eq)
     # اعمال فیلترها
     filtered_df = df.copy()
     if selected_line != "همه":
@@ -118,7 +124,7 @@ if df is not None:
     if selected_eq != "همه":
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
     st.markdown("---")
-    st.subheader("📋 جدول داده‌های فیلتر شده")
+    st.subheader("📋 جدول داده‌ها")
     st.dataframe(filtered_df, use_container_width=True)
     # --- شاخص‌های کلیدی ---
     st.markdown("---")
@@ -134,22 +140,6 @@ if df is not None:
         if "mm/s" in filtered_df.columns:
             val_vib = pd.to_numeric(filtered_df["mm/s"], errors='coerce').fillna(0).max()
         st.metric(label="حداکثر ارتعاش (mm/s)", value=f"{val_vib:.2f}")
-    # --- گزارش سالانه ---
-    st.markdown("---")
-    st.subheader("📅 گزارش سالانه")
-    if "تاریخ" in filtered_df.columns:
-        try:
-            df_copy = filtered_df.copy()
-            df_copy['Year'] = df_copy["تاریخ"].astype(str).str.split('/').str[-1].str.strip()
-            years = df_copy['Year'].unique().tolist()
-            years = [y for y in years if y != 'nan']
-            if years:
-                sel_year = st.selectbox("انتخاب سال برای گزارش:", years)
-                year_sum = pd.to_numeric(df_copy[df_copy['Year'] == sel_year]["بالانس"], errors='coerce').fillna(0).sum()
-                st.info(f"مجموع مقادیر بالانس در سال {sel_year}: *{year_sum:.2f}")
-        except: pass
-
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
-
 else:
-    st.error("❌ خطا در بارگذاری داده‌ها. لطفاً تنظیمات Share گوگل‌شیت را روی Anyone with the link قرار دهید.")
+    st.error("❌ داده‌ها یافت نشدند.")

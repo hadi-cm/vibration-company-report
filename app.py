@@ -5,7 +5,6 @@ import base64
 # ==============================================================================
 # 1. تنظیمات امنیتی و دسترسی (ایمیل‌ها و پسوردها)
 # ==============================================================================
-# در این لیست، پسوردها را بدون حساسیت به حروف بزرگ و کوچک ذخیره می‌کنیم
 USER_CREDENTIALS = {
     "alireza76ir@gmail.com": "siman123",
     "Vah.rezaei@gmail.com": "siman123",
@@ -15,13 +14,11 @@ USER_CREDENTIALS = {
 }
 
 def check_password():
-    """توابع مربوط به احراز هویت کاربر"""
     if "authenticated" not in st.session_state:
         st.session_state["authenticated"] = False
 
     if not st.session_state["authenticated"]:
-        # عنوان جدید طبق درخواست مهندس هادی
-        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه هوشمند پایش وضعیت مجتمع صنعتی سیمان تهران</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه هوشمند پایش وضعیت سیمان تهران</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>لطفاً ایمیل و رمز عبور خود را وارد نمایید</p>", unsafe_allow_html=True)
 
         with st.form("login_form"):
@@ -31,31 +28,26 @@ def check_password():
 
             if submit_button:
                 email_lower = email.strip().lower()
-                # پیدا کردن ایمیل در لیست
                 found_email = next((k for k in USER_CREDENTIALS if k.lower() == email_lower), None)
-
-                # بررسی ایمیل و پسورد (با نادیده گرفتن حروف بزرگ/کوچک در پسورد)
                 if found_email and USER_CREDENTIALS[found_email].lower() == password.strip().lower():
                     st.session_state["authenticated"] = True
                     st.rerun()
                 else:
-                    st.error("❌ ایمیل یا رمز عبور اشتباه است. لطفاً دوباره تلاش کنید.")
+                    st.error("❌ ایمیل یا رمز عبور اشتباه است.")
         return False
     return True
 
-# اجرای بررسی دسترسی در ابتدای برنامه
 if not check_password():
     st.stop()
 
 # ==============================================================================
-# 2. تنظیمات اولیه صفحه (Page Config)
+# 2. تنظیمات اولیه صفحه
 # ==============================================================================
 st.set_page_config(
     page_title="داشبورد ارتعاشات سیمان تهران - مهندس هادی زندیه", 
     layout="wide"
 )
 
-# تابع برای خواندن عکس‌های محلی
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:
@@ -66,7 +58,6 @@ def get_image_base64(path):
 logo_siman_base64 = get_image_base64("client_logo.png")
 logo_faz_fidar_base64 = get_image_base64("my_logo.png")
 
-# استایل CSS
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
@@ -87,9 +78,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ==============================================================================
-# 3. بخش لوگوها و عنوان (Header)
-# ==============================================================================
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
@@ -101,21 +89,26 @@ st.markdown(f"""
 st.markdown("---")
 
 # ==============================================================================
-# 4. اتصال به منبع داده
+# 3. اتصال به منبع داده (با متد خروجی مستقیم و اجباری CSV)
 # ==============================================================================
-sheet_url = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs/export?format=csv&gid=0"
+# لینک را به گونه‌ای تغییر دادم که گوگل را مجبور به ارسال فایل CSV می‌کند
+sheet_id = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
+sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
 
 @st.cache_data(ttl=60)
 def load_data(url):
     try:
-        return pd.read_csv(url)
-    except:
+        # اضافه کردن یک پارامتر تصادفی برای جلوگیری از کش شدن پاسخ‌های خطای گوگل
+        import time
+        url_with_timestamp = f"{url}&t={int(time.time())}"
+        return pd.read_csv(url_with_timestamp)
+    except Exception as e:
         return None
 
 df = load_data(sheet_url)
 
 if df is not None:
-    st.success("✅ ورود با موفقیت انجام شد. اطلاعات به‌روزرسانی شد!")
+    st.success("✅ ورود موفقیت‌آمیز بود. اطلاعات با موفقیت به‌روزرسانی شد!")
 
     st.subheader("📋 جدول جامع داده‌های ارتعاشات و بالانس")
     st.dataframe(df, use_container_width=True)
@@ -159,4 +152,4 @@ if df is not None:
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 
 else:
-    st.error("❌ خطا در بارگذاری داده‌ها. لطفاً دسترسی شیت را بررسی کنید.")
+    st.error("❌ خطا در بارگذاری داده‌ها. لطفاً مطمئن شوید در گوگل‌شیت گزینه Share روی Anyone with the link قرار دارد.")

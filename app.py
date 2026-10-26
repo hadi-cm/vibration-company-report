@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-
 # --- 1. تنظیمات کلی صفحه (Page Configuration) ---
 st.set_page_config(
     page_title="سامانه جامع پایش ارتعاشات", 
@@ -9,12 +8,10 @@ st.set_page_config(
     page_icon="⚙️",
     initial_sidebar_state="expanded"
 )
-
 # --- 2. استایل‌های CSS برای راست‌چین و فونت فارسی ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;400;700&display=swap');
-
     html, body, [class=" css"], .stMarkdown, p, h1, h2, h3, h4, h5, h6, label { 
         font-family: 'Vazirmatn', sans-serif !important; 
         direction: rtl !important; 
@@ -71,64 +68,76 @@ def check_email_access():
 if not check_email_access():
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
     st.stop()
-# --- 4. بارگذاری هوشمند داده‌ها ---
+# ==============================================================================
+# --- 4. نمایش لوگوها (مطابق با نام فایل‌های گیت‌هاب شما) ---
+# ==============================================================================
+header_col1, header_col2, header_col3 = st.columns([1, 2, 1])
+with header_col1:
+    try:
+        # لوگوی سیمان تهران
+        st.image("client_logo.png", width=140)
+    except:
+        st.info("لوگوی سیمان تهران")
+with header_col2:
+    st.markdown("<h1 style='text-align: center; color: #2c3e50; margin-bottom: 0;'>سامانه جامع پایش ارتعاشات</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: gray;'>پایش هوشمند ارتعاشات تجهیزات صنعتی</p>", unsafe_allow_html=True)
+with header_col3:
+    try:
+        # لوگوی فاز فیدار پارسیان
+        st.image("my_logo.png", width=140)
+    except:
+        st.info("لوگوی فاز فیدار")
+st.markdown("---") 
+# ==============================================================================
+# --- 5. بارگذاری هوشمند داده‌ها ---
 SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTI4vONsowudctVbskGkkSyQNqkkGZ8AuiykO9UKeE-8FSBZemWkR4q5DSAhpXEqwQkgsCUQy44Vvqx/pub?gid=0&single=true&output=csv"
 @st.cache_data(ttl=60)
 def load_data():
     try:
         df = pd.read_csv(SHEET_URL)
-        # پاکسازی نام ستون‌ها از هرگونه فاصله اضافی
         df.columns = df.columns.str.strip()
         return df
     except Exception as e:
         st.error(f"⚠️ خطا در دریافت داده‌ها از گوگل‌شیت: {e}")
         return pd.DataFrame()
 df = load_data()
-# --- 5. بدنه اصلی و فیلترهای سلسله‌مراتبی ---
+# --- 6. بدنه اصلی و فیلترهای سلسله‌مراتبی ---
 if not df.empty:
     with st.sidebar:
         st.markdown("### 🛠️ تنظیمات گزارش")
-        # تعریف نام دقیق ستون‌ها (مطابق با شیت شما)
         col_line = 'خط تولید'
         col_unit = 'واحد'
         col_equip = 'عنوان تجهیز'
-        # بررسی وجود ستون‌ها برای جلوگیری از کرش
         available_cols = df.columns.tolist()
         if all(c in available_cols for c in [col_line, col_unit, col_equip]):
-            # ۱. فیلتر خط تولید
             lines = sorted(df[col_line].dropna().unique().tolist())
             selected_line = st.selectbox("۱. انتخاب خط تولید:", lines)
-            # ۲. فیلتر واحد (وابسته به خط تولید)
             units = sorted(df[df[col_line] == selected_line][col_unit].dropna().unique().tolist())
             selected_unit = st.selectbox("۲. انتخاب واحد:", units)
-            # ۳. فیلتر تجهیز (وابسته به خط و واحد)
             equips = sorted(df[(df[col_line] == selected_line) & (df[col_unit] == selected_unit)][col_equip].dropna().unique().tolist())
             selected_equip = st.selectbox("۳. انتخاب تجهیز:", equips)
         else:
-            st.error("❌ نام ستون‌های 'خط تولید'، 'واحد' یا 'عنوان تجهیز' در شیت یافت نشد.")
+            st.error("❌ نام ستون‌های مورد نیاز در شیت یافت نشد.")
             st.stop()
         st.markdown("---")
         if st.button("🔄 به‌روزرسانی لحظه‌ای"):
             st.cache_data.clear()
             st.rerun()
-    # اعمال فیلترهای نهایی
+    # اعمال فیلترها
     final_df = df[(df[col_line] == selected_line) & 
                   (df[col_unit] == selected_unit) & 
                   (df[col_equip] == selected_equip)].copy()
-    # --- 6. نمایش داشبورد ---
+    # --- 7. نمایش داشبورد ---
     st.title(f"📊 پایش وضعیت: {selected_equip}")
-    st.markdown(f"**واحد:** {selected_unit}  |  *خط تولید:* {selected_line}")
+    st.markdown(f"**واحد:** {selected_unit}  |  خط تولید: {selected_line}")
     kpi1, kpi2 = st.columns(2)
     with kpi1:
         st.metric("تعداد نقاط پایش", len(final_df))
     with kpi2:
         st.metric("وضعیت اتصال", "پایدار ✅")
     st.markdown("### 📈 تحلیل ارتعاشات")
-    # شناسایی خودکار ستون‌های عددی برای نمودار
     numeric_cols = final_df.select_dtypes(include=['number']).columns.tolist()
     if numeric_cols:
-        # پیدا کردن ستون شناسنامه نقطه (اولین ستون غیرعددی یا ستون مشخص شده)
-        # معمولاً ستون اول یا ستونی که نامش 'نقطه' یا 'مکان' است
         point_col = None
         for col in df.columns:
             if col not in numeric_cols and col not in [col_line, col_unit, col_equip]:
@@ -151,6 +160,7 @@ if not df.empty:
     st.markdown("### 📋 جزئیات داده‌ها")
     st.dataframe(final_df, use_container_width=True)
 else:
-    st.error("❌ داده‌ای دریافت نشد. لطفاً اتصال اینترنت یا لینک گوگل‌شیت را بررسی کنید.")
-# --- 7. فوتر ---
+    st.error("❌ داده‌ای دریافت نشد.")
+
+# --- 8. فوتر ---
 st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)

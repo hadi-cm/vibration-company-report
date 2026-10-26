@@ -21,7 +21,7 @@ def check_password():
 
     if not st.session_state["authenticated"]:
         # عنوان جدید طبق درخواست مهندس هادی
-        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه هوشمند پایش وضعیت سیمان تهران</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه هوشمند پایش وضعیت مجتمع صنعتی سیمان تهران</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>لطفاً ایمیل و رمز عبور خود را وارد نمایید</p>", unsafe_allow_html=True)
 
         with st.form("login_form"):

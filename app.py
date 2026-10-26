@@ -4,7 +4,7 @@ import base64
 import os
 
 # ==============================================================================
-# 1. تنظیمات امنیتی
+# 1. تنظیمات امنیتی (ورود با ایمیل و پسورد)
 # ==============================================================================
 USER_CREDENTIALS = {
     "alireza76ir@gmail.com": "siman123",
@@ -54,6 +54,7 @@ st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
     div[data-testid="stMetricValue"] { text-align: right; }
+    .stDataFrame { direction: rtl; }
     .logo-container {
         display: flex; justify-content: space-between; align-items: center;
         margin-bottom: 20px; background-color: white; padding: 15px;
@@ -71,7 +72,7 @@ st.markdown("""
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
-        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px;'>📊 داشبورد جامع پایش ارتعاشات و بالانس - سیمان تهران</h1>
+        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>📊 داشبورد جامع پایش ارتعاشات و بالانس - سیمان تهران</h1>
         <img src="data:image/png;base64,{logo_siman_base64}" class="logo-img">
     </div>
     """, unsafe_allow_html=True)
@@ -92,35 +93,47 @@ df = load_data()
 
 if df is not None:
     st.success("✅ داده‌ها با موفقیت بارگذاری شدند!")
-    
-    # --- بخش فیلترها (که قبلاً بود و حالا برمی‌گردد) ---
+
+    # --- بخش فیلترها (دقیقاً طبق درخواست شما) ---
     st.subheader("🔍 فیلترهای جستجو")
-    col_f1, col_f2 = st.columns(2)
-    
-    with col_f1:
-        all_equipment = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
-        selected_eq = st.selectbox("انتخاب تجهیز:", ["همه"] + all_equipment)
-    
-    with col_f2:
+    f_col1, f_col2, f_col3 = st.columns(3)
+
+    with f_col1:
+        # فیلتر ۱: خط تولید
         all_lines = df["خط تولید"].unique().tolist() if "خط تولید" in df.columns else []
-        selected_line = st.selectbox("انتخاب خط تولید:", ["همه"] + all_lines)
+        selected_line = st.selectbox("۱- انتخاب خط تولید:", ["همه"] + [str(x) for x in all_lines])
+
+    with f_col2:
+        # فیلتر ۲: واحد
+        all_units = df["واحد"].unique().tolist() if "واحد" in df.columns else []
+        selected_unit = st.selectbox("۲- انتخاب واحد:", ["همه"] + all_units)
+
+    with f_col3:
+        # فیلتر ۳: تجهیز
+        all_eq = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
+        selected_eq = st.selectbox("۳- انتخاب تجهیز:", ["همه"] + all_eq)
 
     # اعمال فیلترها روی داده‌ها
     filtered_df = df.copy()
+
+    if selected_line != "همه":
+        filtered_df = filtered_df[filtered_df["خط تولید"].astype(str) == selected_line]
+
+    if selected_unit != "همه":
+        filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
+
     if selected_eq != "همه":
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
-    if selected_line != "همه":
-        filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
 
     st.markdown("---")
     st.subheader("📋 جدول داده‌های فیلتر شده")
     st.dataframe(filtered_df, use_container_width=True)
 
-    # --- بخش شاخص‌های کلیدی (همیشه نمایش داده می‌شود) ---
+    # --- بخش شاخص‌های کلیدی ---
     st.markdown("---")
     st.subheader("📈 شاخص‌های کلیدی")
     m1, m2 = st.columns(2)
-    
+
     with m1:
         val_balance = 0.0
         if "بالانس" in filtered_df.columns:
@@ -141,12 +154,13 @@ if df is not None:
             df_copy = filtered_df.copy()
             df_copy['Year'] = df_copy["تاریخ"].astype(str).str.split('/').str[-1].str.strip()
             years = df_copy['Year'].unique().tolist()
-            if years:
-                sel_year = st.selectbox("سال:", years)
+            if years and years[0] != 'nan':
+                sel_year = st.selectbox("انتخاب سال برای گزارش:", years)
                 year_sum = pd.to_numeric(df_copy[df_copy['Year'] == sel_year]["بالانس"], errors='coerce').sum()
-                st.info(f"مجموع بالانس سال {sel_year}: {year_sum:.2f}")
+                st.info(f"مجموع مقادیر بالانس در سال {sel_year}: {year_sum:.2f}")
         except: pass
 
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
+
 else:
-    st.error("❌ فایل data.csv یافت نشد.")
+    st.error("❌ فایل data.csv یافت نشد. لطفاً فایل را در کنار app.py آپلود کنید.")

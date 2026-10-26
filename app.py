@@ -3,15 +3,15 @@ import streamlit as st
 import base64
 
 # ==============================================================================
-# 1. تنظیمات امنیتی و دسترسی (ایمیل‌ها و پسوردهای مجاز)
+# 1. تنظیمات امنیتی و دسترسی (ایمیل‌ها و پسوردها)
 # ==============================================================================
-# هر ایمیل و پسوردی که در این لیست باشد، اجازه ورود دارد
+# در این لیست، پسوردها را بدون حساسیت به حروف بزرگ و کوچک ذخیره می‌کنیم
 USER_CREDENTIALS = {
-    "alireza76ir@gmail.com": "Siman123",
-    "Vah.rezaei@gmail.com": "Siman123",
-    "cm.zandiyeh@gmail.com": "Siman123",
-    "tehrancement@gmail.com": "Siman123",
-    "masoud.sa.1989823@gmail.com": "Siman123",
+    "alireza76ir@gmail.com": "siman123",
+    "Vah.rezaei@gmail.com": "siman123",
+    "cm.zandiyeh@gmail.com": "siman123",
+    "tehrancement@gmail.com": "siman123",
+    "masoud.sa.1989823@gmail.com": "siman123",
 }
 
 def check_password():
@@ -20,7 +20,8 @@ def check_password():
         st.session_state["authenticated"] = False
 
     if not st.session_state["authenticated"]:
-        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه پایش ارتعاشات</h2>", unsafe_allow_html=True)
+        # عنوان جدید طبق درخواست مهندس هادی
+        st.markdown("<h2 style='text-align: center;'>🔐 ورود به سامانه هوشمند پایش وضعیت سیمان تهران</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center;'>لطفاً ایمیل و رمز عبور خود را وارد نمایید</p>", unsafe_allow_html=True)
 
         with st.form("login_form"):
@@ -29,12 +30,12 @@ def check_password():
             submit_button = st.form_submit_button("ورود به داشبورد")
 
             if submit_button:
-                # تبدیل ایمیل ورودی به حروف کوچک برای جلوگیری از خطای تایپی
                 email_lower = email.strip().lower()
-                # پیدا کردن ایمیل در لیست (با نادیده گرفتن حروف بزرگ و کوچک)
+                # پیدا کردن ایمیل در لیست
                 found_email = next((k for k in USER_CREDENTIALS if k.lower() == email_lower), None)
 
-                if found_email and USER_CREDENTIALS[found_email] == password:
+                # بررسی ایمیل و پسورد (با نادیده گرفتن حروف بزرگ/کوچک در پسورد)
+                if found_email and USER_CREDENTIALS[found_email].lower() == password.strip().lower():
                     st.session_state["authenticated"] = True
                     st.rerun()
                 else:
@@ -114,7 +115,7 @@ def load_data(url):
 df = load_data(sheet_url)
 
 if df is not None:
-    st.success("✅ خوش آمدید. اطلاعات با موفقیت به‌روزرسانی شد!")
+    st.success("✅ ورود با موفقیت انجام شد. اطلاعات به‌روزرسانی شد!")
 
     st.subheader("📋 جدول جامع داده‌های ارتعاشات و بالانس")
     st.dataframe(df, use_container_width=True)

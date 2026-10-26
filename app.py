@@ -1,9 +1,10 @@
 import pandas as pd
 import streamlit as st
 import base64
+import os
 
 # ==============================================================================
-# 1. تنظیمات امنیتی و دسترسی (ایمیل‌ها و پسوردها)
+# 1. تنظیمات امنیتی (ورود با ایمیل و پسورد)
 # ==============================================================================
 USER_CREDENTIALS = {
     "alireza76ir@gmail.com": "siman123",
@@ -81,7 +82,7 @@ st.markdown("""
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
-        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8A; font-size: 26px; margin: 0;'>📊 داشبورد جامع پایش ارتعاشات و بالانس - سیمان تهران</h1>
+        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>📊 داشبورد جامع پایش ارتعاشات و بالانس - سیمان تهران</h1>
         <img src="data:image/png;base64,{logo_siman_base64}" class="logo-img">
     </div>
     """, unsafe_allow_html=True)
@@ -89,26 +90,29 @@ st.markdown(f"""
 st.markdown("---")
 
 # ==============================================================================
-# 3. اتصال به منبع داده (با متد خروجی مستقیم و اجباری CSV)
+# 3. خواندن داده‌ها - فقط و فقط از فایل محلی (بدون هیچ ارتباط با گوگل)
 # ==============================================================================
-# لینک را به گونه‌ای تغییر دادم که گوگل را مجبور به ارسال فایل CSV می‌کند
-sheet_id = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
-sheet_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
-
-@st.cache_data(ttl=60)
-def load_data(url):
-    try:
-        # اضافه کردن یک پارامتر تصادفی برای جلوگیری از کش شدن پاسخ‌های خطای گوگل
-        import time
-        url_with_timestamp = f"{url}&t={int(time.time())}"
-        return pd.read_csv(url_with_timestamp)
-    except Exception as e:
+@st.cache_data
+def load_data():
+    file_path = "data.csv"
+    if os.path.exists(file_path):
+        try:
+            # خواندن فایل با انکودینگ utf-8 برای پشتیبانی از فارسی
+            return pd.read_csv(file_path, encoding='utf-8')
+        except:
+            try:
+                # اگر utf-8 خطا داد، با cp1252 یا latin1 امتحان می‌کند
+                return pd.read_csv(file_path, encoding='cp1252')
+            except Exception as e:
+                st.error(f"خطا در خواندن محتوای فایل: {e}")
+                return None
+    else:
         return None
 
-df = load_data(sheet_url)
+df = load_data()
 
 if df is not None:
-    st.success("✅ ورود موفقیت‌آمیز بود. اطلاعات با موفقیت به‌روزرسانی شد!")
+    st.success("✅ داده‌ها با موفقیت از فایل محلی بارگذاری شدند!")
 
     st.subheader("📋 جدول جامع داده‌های ارتعاشات و بالانس")
     st.dataframe(df, use_container_width=True)
@@ -152,4 +156,4 @@ if df is not None:
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 
 else:
-    st.error("❌ خطا در بارگذاری داده‌ها. لطفاً مطمئن شوید در گوگل‌شیت گزینه Share روی Anyone with the link قرار دارد.")
+    st.error("❌ فایل data.csv در پوشه پروژه پیدا نشد. لطفاً مطمئن شوید نام فایل دقیقاً data.csv است و در کنار app.py آپلود شده است.")

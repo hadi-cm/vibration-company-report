@@ -94,34 +94,28 @@ df = load_data()
 if df is not None:
     st.success("✅ داده‌ها با موفقیت بارگذاری شدند!")
 
-    # --- بخش فیلترها (دقیقاً طبق درخواست شما) ---
-    st.subheader("🔍 فیلترهای جستجو")
-    f_col1, f_col2, f_col3 = st.columns(3)
+    # --- بخش فیلترها (به صورت کشویی/Expander) ---
+    with st.expander("🔍 کلیک کنید تا فیلترهای جستجو باز شود"):
+        f_col1, f_col2, f_col3 = st.columns(3)
 
-    with f_col1:
-        # فیلتر ۱: خط تولید
-        all_lines = df["خط تولید"].unique().tolist() if "خط تولید" in df.columns else []
-        selected_line = st.selectbox("۱- انتخاب خط تولید:", ["همه"] + [str(x) for x in all_lines])
+        with f_col1:
+            all_lines = df["خط تولید"].unique().tolist() if "خط تولید" in df.columns else []
+            selected_line = st.selectbox("۱- انتخاب خط تولید:", ["همه"] + [str(x) for x in all_lines])
 
-    with f_col2:
-        # فیلتر ۲: واحد
-        all_units = df["واحد"].unique().tolist() if "واحد" in df.columns else []
-        selected_unit = st.selectbox("۲- انتخاب واحد:", ["همه"] + all_units)
+        with f_col2:
+            all_units = df["واحد"].unique().tolist() if "واحد" in df.columns else []
+            selected_unit = st.selectbox("۲- انتخاب واحد:", ["همه"] + all_units)
 
-    with f_col3:
-        # فیلتر ۳: تجهیز
-        all_eq = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
-        selected_eq = st.selectbox("۳- انتخاب تجهیز:", ["همه"] + all_eq)
+        with f_col3:
+            all_eq = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
+            selected_eq = st.selectbox("۳- انتخاب تجهیز:", ["همه"] + all_eq)
 
     # اعمال فیلترها روی داده‌ها
     filtered_df = df.copy()
-
     if selected_line != "همه":
         filtered_df = filtered_df[filtered_df["خط تولید"].astype(str) == selected_line]
-
     if selected_unit != "همه":
         filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
-
     if selected_eq != "همه":
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
 
@@ -163,4 +157,4 @@ if df is not None:
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 
 else:
-    st.error("❌ فایل data.csv یافت نشد. لطفاً فایل را در کنار app.py آپلود کنید.")
+    st.error("❌ فایل data.csv یافت نشد.")

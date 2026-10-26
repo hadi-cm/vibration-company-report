@@ -69,32 +69,34 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال هوشمند به گوگل شیت (برای خواندن تمام تب‌ها)
+# 3. اتصال مستقیم و آنلاین به گوگل شیت
 # ==============================================================================
+# آدرس شیت شما
 SHEET_ID = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
-@st.cache_data(ttl=60)
-def load_all_sheets():
+# تبدیل لینک گوگل شیت به لینک مستقیم دانلود CSV
+GOOGLE_SHEET_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv"
+@st.cache_data(ttl=60) # هر ۶۰ ثانیه داده‌ها را به‌روز می‌کند
+def load_online_data():
     try:
-        # خواندن تب ارتعاشات
-        url_vib = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0" # gid=0 معمولا اولین تب است
-        # توجه: برای تب‌های دیگر باید GID هر تب را بدانید. 
-        # چون GIDهای شما را ندارم، فعلاً از روش CSV محلی برای تجهیزات استفاده می‌کنیم 
-        # اما برای حل مشکل شما، کد را طوری نوشتم که اگر در فایل data.csv نامی نبود، 
-        # اما در لیست تجهیزات بود، باز هم نمایش داده شود.
-        if os.path.exists("data.csv"):
-            df = pd.read_csv("data.csv", encoding='utf-8')
-            return df
+        # خواندن مستقیم از لینک گوگل شیت
+        df = pd.read_csv(GOOGLE_SHEET_URL)
+        # پاک‌سازی نام‌ها
+        if "عنوان تجهیز" in df.columns:
+            df["عنوان تجهیز"] = df["عنوان تجهیز"].astype(str).str.strip()
+        if "واحد" in df.columns:
+            df["واحد"] = df["واحد"].astype(str).str.strip()
+        if "خط تولید" in df.columns:
+            df["خط تولید"] = df["خط تولید"].astype(str).str.strip()
+        return df
+    except Exception as e:
+        st.error(f"خطا در اتصال به گوگل شیت: {e}")
         return None
-    except:
-        return None
-df = load_all_sheets()
+df = load_online_data()
 if df is not None:
-    st.success("✅ داده‌ها با موفقیت بارگذاری شدند!")
-    # --- بخش فیلترها ---
+    st.success("✅ اتصال آنلاین برقرار شد. داده‌های شما به‌صورت لحظه‌ای به‌روزرسانی می‌شوند!")
+    # --- بخش فیلترها در کشو ---
     with st.expander("🔍 کلیک کنید تا فیلترهای جستجو باز شود"):
         f_col1, f_col2, f_col3 = st.columns(3)
-        # نکته: برای اینکه تجهیزات جدید که داده ندارند هم بیایند، 
-        # ما باید لیست تجهیزات را از یک ستون مرجع بخوانیم.
         with f_col1:
             all_lines = df["خط تولید"].unique().tolist() if "خط تولید" in df.columns else []
             all_lines = [str(x) for x in all_lines if x != 'nan']
@@ -104,18 +106,17 @@ if df is not None:
             all_units = [str(x) for x in all_units if x != 'nan']
             selected_unit = st.selectbox("۲- انتخاب واحد:", ["همه"] + all_units)
         with f_col3:
-            # اینجا نکته طلایی است: تمام تجهیزات موجود در فایل را می‌گیرد
             all_eq = df["عنوان تجهیز"].unique().tolist() if "عنوان تجهیز" in df.columns else []
             all_eq = [str(x) for x in all_eq if x != 'nan']
             selected_eq = st.selectbox("۳- انتخاب تجهیز:", ["همه"] + all_eq)
     # اعمال فیلترها
     filtered_df = df.copy()
     if selected_line != "همه":
-        filtered_df = filtered_df[filtered_df["خط تولید"].astype(str) == selected_line]
+        filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
     if selected_unit != "همه":
-        filtered_df = filtered_df[filtered_df["واحد"].astype(str) == selected_unit]
+        filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
     if selected_eq != "همه":
-        filtered_df = filtered_df[filtered_df["عنوان تجهیز"].astype(str) == selected_eq]
+        filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
     st.markdown("---")
     st.subheader("📋 جدول داده‌های فیلتر شده")
     st.dataframe(filtered_df, use_container_width=True)
@@ -151,4 +152,4 @@ if df is not None:
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 
 else:
-    st.error("❌ داده‌ها یافت نشدند.")
+    st.error("❌ خطا در بارگذاری داده‌ها. لطفاً تنظیمات Share گوگل‌شیت را روی Anyone with the link قرار دهید.")

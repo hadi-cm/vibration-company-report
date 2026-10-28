@@ -12,6 +12,7 @@ USER_CREDENTIALS = {
     "cm.zandiyeh@gmail.com": "siman123",
     "tehrancement@gmail.com": "siman123",
     "masoud.sa.1989823@gmail.com": "siman123",
+    "hamidrezadorod@gmail.com": "cement38p02146",
 }
 def check_password():
     if "authenticated" not in st.session_state:

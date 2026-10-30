@@ -70,7 +70,7 @@ st.markdown(f"""
 # ==============================================================================
 # 3. اتصال به گوگل‌شیت (با GID برای اطمینان)
 # ==============================================================================
-SHEET_ID = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
+SHEET_ID = "https://github.com/hadi-cm/vibration-company-report/blob/main/data.csv?plain=1"
 VIB_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_online_data():

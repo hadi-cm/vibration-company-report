@@ -32,7 +32,7 @@ def check_password():
 if not check_password():
     st.stop()
 # ==============================================================================
-# 2. تنظیمات صفحه و استایل (اصلاح شده برای تراز کردن لوگوها)
+# 2. تنظیمات صفحه و استایل (تراز شده)
 # ==============================================================================
 st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
 def get_image_base64(path):
@@ -48,23 +48,14 @@ st.markdown("""
     div[data-testid="stMetricValue"] { text-align: right; }
     .stDataFrame { direction: rtl; }
     .logo-container {
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-        margin-bottom: 20px; 
-        background-color: white; 
-        padding: 10px 20px;
-        border-radius: 15px; 
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; background-color: white; padding: 10px 20px;
+        border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .logo-img { width: 100px; height: auto; object-fit: contain; }
     .main-title { 
-        flex-grow: 1; 
-        text-align: center; 
-        color: #1E3A8D; 
-        font-size: 24px; 
-        font-weight: bold; 
-        margin: 0 20px;
+        flex-grow: 1; text-align: center; color: #1E3A8D; 
+        font-size: 24px; font-weight: bold; margin: 0 20px;
     }
     .footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
@@ -81,9 +72,10 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال به داده‌ها (لینک مستقیم برای رفع ارور 404)
+# 3. اتصال به داده‌ها (با آدرس جدید شما و فرمت صحیح CSV)
 # ==============================================================================
-VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs/export?format=csv&gid=0"
+# من آدرس شما را به فرمت CSV تبدیل کردم تا پایتون بتواند آن را بخواند
+VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_online_data():
     try:
@@ -92,7 +84,7 @@ def load_online_data():
         df = df.astype(str).apply(lambda x: x.str.strip())
         return df
     except Exception as e:
-        st.error(f"❌ خطا در اتصال به گوگل‌شیت (404): {e}")
+        st.error(f"❌ خطا در اتصال به گوگل‌شیت: {e}")
         return None
 df = load_online_data()
 if df is not None:
@@ -149,4 +141,4 @@ if df is not None:
     st.dataframe(filtered_df, use_container_width=True)
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
-    st.error("❌ خطا در دریافت داده‌ها. لطفا دسترسی Share گوگل‌شیت را روی Anyone with the link قرار دهید.")
+    st.error("❌ خطا در دریافت داده‌ها. لطفاً دسترسی Share گوگل‌شیت را روی Anyone with the link قرار دهید.")

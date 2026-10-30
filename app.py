@@ -62,16 +62,12 @@ st.markdown("""
         background-color: #f8f9fa; text-align: center; padding: 12px 0;
         font-weight: bold; border-top: 3px solid #2E7D32; z-index: 999;
     }
-    /* استایل برای خوانایی بهتر جدول */
-    [data-testid="stDataFrame"] {
-        direction: rtl !important;
-    }
     </style>
     """, unsafe_allow_html=True)
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
-        <div class="main-title">🛠️ سامانه پایش فنی و بالانس تجهیزات - سیمان تهران</div>
+        <div class="main-title">🛠️ سامانه پایش وضعیت تجهیزات دوار سیمان تهران</div>
         <img src="data:image/png;base64,{logo_siman_base64}" class="logo-img">
     </div>
     """, unsafe_allow_html=True)
@@ -92,26 +88,41 @@ def load_online_data():
 df = load_online_data()
 if df is not None:
     # ==============================================================================
-    # 4. بخش فیلترهای پیشرفته
+    # 4. بخش فیلترهای پیشرفته (اضافه شدن فیلتر تاریخ تک راک)
     # ==============================================================================
     with st.expander("🔍 سیستم جستجو و فیلتر پیشرفته", expanded=True):
-        st.write("برای مقایسه یا جستجوی سریع، از گزینه‌های زیر استفاده کنید:")
-        f_col1, f_col2, f_col3 = st.columns(3)
+        st.write("برای جستجو، مقایسه یا مشاهده تک‌تاریخ، از گزینه‌های زیر استفاده کنید:")
+        f_col1, f_col2, f_col3, f_col4 = st.columns([1, 1, 1, 1])
         with f_col1:
             all_lines = sorted([str(x) for x in df["خط تولید"].unique() if str(x) not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
-            selected_line = st.selectbox("📍 انتخاب خط تولید:", ["همه"] + all_lines)
+            selected_line = st.selectbox("📍 خط تولید:", ["همه"] + all_lines)
         with f_col2:
             all_units = sorted([str(x) for x in df["واحد"].unique() if str(x) not in ['nan', 'None', '']]) if "واحد" in df.columns else []
-            selected_unit = st.selectbox("🏢 انتخاب واحد:", ["همه"] + all_units)
+            selected_unit = st.selectbox("🏢 واحد:", ["همه"] + all_units)
         with f_col3:
-            search_eq = st.text_input("🔍 جستجوی نام تجهیز یا کد:", "")
+            search_eq = st.text_input("🔍 نام تجهیز:", "")
+        # --- فیلتر تاریخ پویا (فقط وقتی تجهیز انتخاب شده فعال می‌شود) ---
+        # ابتدا داده‌ها را بر اساس فیلترهای بالا محدود می‌کنیم تا تاریخ‌های مربوطه را پیدا کنیم
+        temp_df = df.copy()
+        if selected_line != "همه": temp_df = temp_df[temp_df["خط تولید"] == selected_line]
+        if selected_unit != "همه": temp_df = temp_df[temp_df["واحد"] == selected_unit]
+        if search_eq: temp_df = temp_df[temp_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
+        # پیدا کردن ستون تاریخ
+        date_col_name = next((col for col in df.columns if "تاریخ" in col), None)
+        with f_col4:
+            if date_col_name and not temp_df.empty:
+                # استخراج تمام تاریخ‌های موجود برای تجهیزات فیلتر شده
+                available_dates = sorted(temp_df[date_col_name].unique(), reverse=True)
+                selected_date = st.selectbox("📅 انتخاب تاریخ خاص:", ["همه تاریخ‌ها"] + list(available_dates))
+            else:
+                selected_date = "همه تاریخ‌ها"
+    # اعمال نهایی فیلترها روی DataFrame اصلی
     filtered_df = df.copy()
-    if selected_line != "همه":
-        filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
-    if selected_unit != "همه":
-        filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
-    if search_eq:
-        filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
+    if selected_line != "همه": filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
+    if selected_unit != "همه": filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
+    if search_eq: filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
+    if selected_date != "همه تاریخ‌ها" and date_col_name:
+        filtered_df = filtered_df[filtered_df[date_col_name] == selected_date]
     # ==============================================================================
     # 5. نمایش نتایج و متریک‌ها
     # ==============================================================================
@@ -119,7 +130,7 @@ if df is not None:
     st.subheader("📈 وضعیت تحلیل فنی")
     m1, m2, m3 = st.columns(3)
     with m1:
-        st.metric(label="تعداد کل تجهیزات یافت شده", value=len(filtered_df))
+        st.metric(label="تعداد رکورد یافت شده", value=len(filtered_df))
     with m2:
         if "بالانس" in filtered_df.columns:
             bal_done = filtered_df[~filtered_df["بالانس"].isin(['nan', 'None', ''])].shape[0]
@@ -135,18 +146,11 @@ if df is not None:
         else:
             st.metric(label="ستون هزینه یافت نشد", value=0)
     # ==============================================================================
-    # 6. نمایش جدول (اصلاح شده برای خواندن بهتر ستون‌ها)
+    # 6. نمایش جدول نهایی
     # ==============================================================================
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
-    # استفاده از st.dataframe با تنظیمات column_config برای جلوگیری از قطع شدن متن
-    # کاربر اکنون می‌تواند عرض ستون‌ها را با موس تغییر دهد
-    st.dataframe(
-        filtered_df, 
-        use_container_width=True, 
-        hide_index=True
-    )
-    st.info("💡 نکته: برای خواندن کامل متن‌های طولانی در ستون‌ها، می‌توانید عرض ستون را با موس بکشید و پهن کنید.")
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
     st.error("❌ خطا در دریافت داده‌ها.")

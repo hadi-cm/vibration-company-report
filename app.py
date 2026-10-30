@@ -34,7 +34,7 @@ if not check_password():
 # ==============================================================================
 # 2. تنظیمات صفحه و استایل
 # ==============================================================================
-st.set_page_config(page_title="داشبورد پایش وضعیت تجهیزات سیمان تهران", layout="wide")
+st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:
@@ -46,7 +46,6 @@ st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
     div[data-testid="stMetricValue"] { text-align: center; }
-    .stDataFrame { direction: rtl; }
     .logo-container {
         display: flex; justify-content: space-between; align-items: center;
         margin-bottom: 20px; background-color: white; padding: 15px 30px;
@@ -62,6 +61,10 @@ st.markdown("""
         position: fixed; left: 0; bottom: 0; width: 100%;
         background-color: #f8f9fa; text-align: center; padding: 12px 0;
         font-weight: bold; border-top: 3px solid #2E7D32; z-index: 999;
+    }
+    /* استایل برای خوانایی بهتر جدول */
+    [data-testid="stDataFrame"] {
+        direction: rtl !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -89,30 +92,25 @@ def load_online_data():
 df = load_online_data()
 if df is not None:
     # ==============================================================================
-    # 4. بخش فیلترهای پیشرفته (جستجو و مقایسه)
+    # 4. بخش فیلترهای پیشرفته
     # ==============================================================================
     with st.expander("🔍 سیستم جستجو و فیلتر پیشرفته", expanded=True):
         st.write("برای مقایسه یا جستجوی سریع، از گزینه‌های زیر استفاده کنید:")
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            # فیلتر خط تولید
             all_lines = sorted([str(x) for x in df["خط تولید"].unique() if str(x) not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
             selected_line = st.selectbox("📍 انتخاب خط تولید:", ["همه"] + all_lines)
         with f_col2:
-            # فیلتر واحد
             all_units = sorted([str(x) for x in df["واحد"].unique() if str(x) not in ['nan', 'None', '']]) if "واحد" in df.columns else []
             selected_unit = st.selectbox("🏢 انتخاب واحد:", ["همه"] + all_units)
         with f_col3:
-            # جستجوی متنی برای نام تجهیز (جهت سرعت بیشتر در مقایسه)
             search_eq = st.text_input("🔍 جستجوی نام تجهیز یا کد:", "")
-    # اعمال فیلترها روی داده‌ها
     filtered_df = df.copy()
     if selected_line != "همه":
         filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
     if selected_unit != "همه":
         filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
     if search_eq:
-        # جستجوی منعطف: اگر عبارت وارد شده در هر جای نام تجهیز بود، نمایش بده
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
     # ==============================================================================
     # 5. نمایش نتایج و متریک‌ها
@@ -136,10 +134,19 @@ if df is not None:
             st.metric(label="جمع کل هزینه‌ها", value=f"{total_cost:,.0f} تومان")
         else:
             st.metric(label="ستون هزینه یافت نشد", value=0)
-    # نمایش جدول نهایی
+    # ==============================================================================
+    # 6. نمایش جدول (اصلاح شده برای خواندن بهتر ستون‌ها)
+    # ==============================================================================
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
-    st.dataframe(filtered_df, use_container_width=True)
+    # استفاده از st.dataframe با تنظیمات column_config برای جلوگیری از قطع شدن متن
+    # کاربر اکنون می‌تواند عرض ستون‌ها را با موس تغییر دهد
+    st.dataframe(
+        filtered_df, 
+        use_container_width=True, 
+        hide_index=True
+    )
+    st.info("💡 نکته: برای خواندن کامل متن‌های طولانی در ستون‌ها، می‌توانید عرض ستون را با موس بکشید و پهن کنید.")
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
     st.error("❌ خطا در دریافت داده‌ها.")

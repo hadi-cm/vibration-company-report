@@ -71,7 +71,7 @@ st.markdown(f"""
 # 3. اتصال به گوگل‌شیت (با GID برای اطمینان)
 # ==============================================================================
 `SHEET_ID = "1H4Yf3ilu72h17Zns6EXNmpOfh-Eli98_sEO_81uXrs"`
-https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/edit?gid=0#gid=0
+VIB_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_online_data():
     try:

@@ -74,14 +74,14 @@ st.markdown(f"""
 def load_online_data():
     try:
         import pandas as pd
-        # خواندن مستقیم از فایل محلی که آپلود کردید
+        # خواندن مستقیم از فایل محلی
         df = pd.read_csv("data.csv") 
         df.columns = df.columns.str.strip()
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip()
         return df
     except Exception as e:
-        st.error(f"❌ خطا در خواندن فایل data.csv: {e}")
+        st.error(f"❌ خطا در خواندن فایل محلی: {e}")
         return None
 df = load_online_data()
 if df is not None:

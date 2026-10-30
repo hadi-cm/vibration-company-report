@@ -34,7 +34,7 @@ if not check_password():
 # ==============================================================================
 # 2. تنظیمات صفحه و استایل
 # ==============================================================================
-st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
+st.set_page_config(page_title="داشبورد پایش وضعیت ارتعاشات سیمان تهران", layout="wide")
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:

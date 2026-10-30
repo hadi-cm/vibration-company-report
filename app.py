@@ -70,19 +70,18 @@ st.markdown(f"""
 # ==============================================================================
 # 3. اتصال به گوگل‌شیت (با GID برای اطمینان)
 # ==============================================================================
-VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv"
-@st.cache_data(ttl=60)
+@st.cache_data
 def load_online_data():
     try:
         import pandas as pd
-        # استفاده از متد مستقیم برای خواندن CSV بدون نیاز به requests
-        df = pd.read_csv(VIB_URL)
+        # خواندن مستقیم از فایل محلی که آپلود کردید
+        df = pd.read_csv("data.csv") 
         df.columns = df.columns.str.strip()
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip()
         return df
     except Exception as e:
-        st.error(f"❌ خطا در خواندن داده‌ها: {e}")
+        st.error(f"❌ خطا در خواندن فایل data.csv: {e}")
         return None
 df = load_online_data()
 if df is not None:

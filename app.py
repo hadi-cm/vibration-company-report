@@ -1,4 +1,5 @@
- pandas as pd
+```python
+import pandas as pd
 import streamlit as st
 import base64
 # ==============================================================================
@@ -35,6 +36,7 @@ if not check_password():
 # 2. تنظیمات صفحه و استایل
 # ==============================================================================
 st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
+st.markdown("<h2 style='text-align: center;'>سامانه پایش وضعیت تجهیزات دوار - سیمان تهران 🛠️</h2>", unsafe_allow_html=True)
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:
@@ -53,50 +55,41 @@ st.markdown("""
         border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .logo-img { width: 110px; height: auto; }
-    .footer {
-        position: fixed; left: 0; bottom: 0; width: 100%;
-        background-color: #f8f9fa; text-align: center; padding: 12px 0;
-        font-weight: bold; border-top: 3px solid #2E7D32; z-index: 999;
-    }
     </style>
     """, unsafe_allow_html=True)
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
-        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>🛠️ سامانه پایش فنی و بالانس تجهیزات - سیمان تهران</h1>
+        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>🛠️ سامانه پایش وضعیت تجهیزات دوار - سیمان تهران</h1>
         <img src="data:image/png;base64,{logo_siman_base64}" class="logo-img">
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال به گوگل‌شیت (با GID برای اطمینان)
+# 3. اتصال به داده‌ها
 # ==============================================================================
 @st.cache_data
-def load_online_data():
+def load_data():
     try:
-        import pandas as pd
-        # خواندن مستقیم از فایل محلی
         df = pd.read_csv("data.csv") 
         df.columns = df.columns.str.strip()
-        for col in df.columns:
-            df[col] = df[col].astype(str).str.strip()
         return df
     except Exception as e:
-        st.error(f"❌ خطا در خواندن فایل محلی: {e}")
+        st.error(f"❌ خطا در خواندن فایل: {e}")
         return None
-df = load_online_data()
+df = load_data()
 if df is not None:
     # --- بخش فیلترها ---
     with st.expander("🔍 فیلترهای جستجو"):
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            all_lines = [x for x in df["خط تولید"].unique() if x != 'nan'] if "خط تولید" in df.columns else []
-            selected_line = st.selectbox("۱- خط تولید:", ["همه"] + all_lines)
+            all_lines = [x for x in df["خط تولید"].unique() if str(x) != 'nan'] if "خط تولید" in df.columns else []
+            selected_line = st.selectbox("خط تولید:", ["همه"] + all_lines)
         with f_col2:
-            all_units = [x for x in df["واحد"].unique() if x != 'nan'] if "واحد" in df.columns else []
-            selected_unit = st.selectbox("۲- واحد:", ["همه"] + all_units)
+            all_units = [x for x in df["واحد"].unique() if str(x) != 'nan'] if "واحد" in df.columns else []
+            selected_unit = st.selectbox("واحد:", ["همه"] + all_units)
         with f_col3:
-            all_eq = [x for x in df["عنوان تجهیز"].unique() if x != 'nan'] if "عنوان تجهیز" in df.columns else []
-            selected_eq = st.selectbox("۳- تجهیز:", ["همه"] + all_eq)
+            all_eq = [x for x in df["عنوان تجهیز"].unique() if str(x) != 'nan'] if "عنوان تجهیز" in df.columns else []
+            selected_eq = st.selectbox("تجهیز:", ["همه"] + all_eq)
     # اعمال فیلترها
     filtered_df = df.copy()
     if selected_line != "همه" and "خط تولید" in filtered_df.columns:
@@ -105,32 +98,33 @@ if df is not None:
         filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
     if selected_eq != "همه" and "عنوان تجهیز" in filtered_df.columns:
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
-    # --- شاخص‌های کلیدی (بخش اصلاح شده بالانس) ---
+    # --- شاخص‌های کلیدی ---
     st.markdown("---")
     st.subheader("📈 وضعیت تحلیل فنی")
     m1, m2, m3 = st.columns(3)
     with m1:
-        # شمارش تعداد کل تجهیزات در لیست فیلتر شده
         total_eq = len(filtered_df)
         st.metric(label="تعداد کل تجهیزات", value=total_eq)
     with m2:
-        # شمارش تجهیزاتی که در ستون بالانس، مقدارشان خالی نیست یا عبارت خاصی دارند
-        # فرض می‌کنیم هر چیزی در ستون بالانس نوشته شود یعنی نیاز به بررسی/بالانس دارد
+        # منطق دینامیک: هر چه در ستون بالانس نوشته شده باشد (خالی نباشد) بشمار
         if "بالانس" in filtered_df.columns:
-            # شمارش ردیف‌هایی که در ستون بالانس مقدار دارند و 'nan' نیستند
-            needs_balancing = filtered_df[filtered_df["بالانس"] != 'nan'].shape[0]
-            st.metric(label="تعداد نیازمند بالانس", value=needs_balancing, delta=f"{needs_balancing} مورد", delta_color="inverse")
+            bal_done = filtered_df[filtered_df["بالانس"].notna() & (filtered_df["بالانس"].astype(str).str.strip() != "")].shape[0]
+            st.metric(label="تعداد بالانس شده", value=bal_done, delta=f"{bal_done} مورد")
         else:
-            st.metric(label="ستون بالانس یافت نشد", value="0")
+            st.metric(label="ستون بالانس یافت نشد", value=0)
     with m3:
-        # جمع کل هزینه‌ها (اگر ستون هزینه وجود داشته باشد)
+        # جمع کل هزینه‌ها
         total_cost = 0.0
         if "هزینه" in filtered_df.columns:
             total_cost = pd.to_numeric(filtered_df["هزینه"], errors='coerce').fillna(0).sum()
-        st.metric(label="جمع کل هزینه‌ها", value=f"{total_cost:,.0f} تومان")
+            st.metric(label="جمع کل هزینه‌ها", value=f"{total_cost:,.0f} تومان")
+        else:
+            st.metric(label="ستون هزینه یافت نشد", value=0)
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش")
     st.dataframe(filtered_df, use_container_width=True)
-    st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
-else:
-    st.error("❌ داده‌ها یافت نشدند. لطفاً تنظیمات Share گوگل‌شیت را بررسی کنید.")
+    st.markdown("""
+        <div style='text-align: center; margin-top: 50px; font-weight: bold; color: gray;'>
+        طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان
+        </div>
+        """, unsafe_allow_html=True)

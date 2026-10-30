@@ -35,7 +35,6 @@ if not check_password():
 # 2. تنظیمات صفحه و استایل
 # ==============================================================================
 st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
-st.markdown("<h2 style='text-align: center;'>سامانه پایش وضعیت تجهیزات دوار - سیمان تهران 🛠️</h2>", unsafe_allow_html=True)
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:
@@ -54,48 +53,57 @@ st.markdown("""
         border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .logo-img { width: 110px; height: auto; }
+    .footer {
+        position: fixed; left: 0; bottom: 0; width: 100%;
+        background-color: #f8f9fa; text-align: center; padding: 12px 0;
+        font-weight: bold; border-top: 3px solid #2E7D32; z-index: 999;
+    }
     </style>
     """, unsafe_allow_html=True)
 st.markdown(f"""
     <div class="logo-container">
         <img src="data:image/png;base64,{logo_faz_fidar_base64}" class="logo-img">
-        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>🛠️ سامانه پایش وضعیت تجهیزات دوار - سیمان تهران</h1>
+        <h1 style='text-align: center; flex-grow: 1; color: #1E3A8D; font-size: 26px; margin: 0;'>🛠️ سامانه پایش فنی و بالانس تجهیزات - سیمان تهران</h1>
         <img src="data:image/png;base64,{logo_siman_base64}" class="logo-img">
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال به داده‌ها
+# 3. اتصال به گوگل‌شیت
 # ==============================================================================
-@st.cache_data
-def load_data():
+SHEET_ID = "1H4Yf3ilu72hl7YZns6EXNMpOfh-Eli98_sEO_81uXrs"
+VIB_URL = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid=0"
+@st.cache_data(ttl=60)
+def load_online_data():
     try:
-        df = pd.read_csv("data.csv") 
+        df = pd.read_csv(VIB_URL)
         df.columns = df.columns.str.strip()
+        # تبدیل تمام مقادیر به رشته برای جلوگیری از خطای nan
+        df = df.astype(str).apply(lambda x: x.str.strip())
         return df
     except Exception as e:
-        st.error(f"❌ خطا در خواندن فایل: {e}")
+        st.error(f"❌ خطا در اتصال به گوگل‌شیت: {e}")
         return None
-df = load_data()
+df = load_online_data()
 if df is not None:
     # --- بخش فیلترها ---
     with st.expander("🔍 فیلترهای جستجو"):
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            all_lines = [x for x in df["خط تولید"].unique() if str(x) != 'nan'] if "خط تولید" in df.columns else []
-            selected_line = st.selectbox("خط تولید:", ["همه"] + all_lines)
+            all_lines = sorted([x for x in df["خط تولید"].unique() if x not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
+            selected_line = st.selectbox("۱- خط تولید:", ["همه"] + all_lines)
         with f_col2:
-            all_units = [x for x in df["واحد"].unique() if str(x) != 'nan'] if "واحد" in df.columns else []
-            selected_unit = st.selectbox("واحد:", ["همه"] + all_units)
+            all_units = sorted([x for x in df["واحد"].unique() if x not in ['nan', 'None', '']]) if "واحد" in df.columns else []
+            selected_unit = st.selectbox("۲- واحد:", ["همه"] + all_units)
         with f_col3:
-            all_eq = [x for x in df["عنوان تجهیز"].unique() if str(x) != 'nan'] if "عنوان تجهیز" in df.columns else []
-            selected_eq = st.selectbox("تجهیز:", ["همه"] + all_eq)
+            all_eq = sorted([x for x in df["عنوان تجهیز"].unique() if x not in ['nan', 'None', '']]) if "عنوان تجهیز" in df.columns else []
+            selected_eq = st.selectbox("۳- تجهیز:", ["همه"] + all_eq)
     # اعمال فیلترها
     filtered_df = df.copy()
-    if selected_line != "همه" and "خط تولید" in filtered_df.columns:
+    if selected_line != "همه":
         filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
-    if selected_unit != "همه" and "واحد" in filtered_df.columns:
+    if selected_unit != "همه":
         filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
-    if selected_eq != "همه" and "عنوان تجهیز" in filtered_df.columns:
+    if selected_eq != "همه":
         filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
     # --- شاخص‌های کلیدی ---
     st.markdown("---")
@@ -105,27 +113,40 @@ if df is not None:
         total_eq = len(filtered_df)
         st.metric(label="تعداد کل تجهیزات", value=total_eq)
     with m2:
-        # منطق دینامیک: هر چه در ستون بالانس نوشته شده باشد (خالی نباشد) بشمار
+        # اصلاح شمارش بالانس: فقط مواردی که nan یا None یا خالی نیستند
         if "بالانس" in filtered_df.columns:
-            bal_done = filtered_df[filtered_df["بالانس"].notna() & (filtered_df["بالانس"].astype(str).str.strip() != "")].shape[0]
+            bal_done = filtered_df[~filtered_df["بالانس"].isin(['nan', 'None', ''])].shape[0]
             st.metric(label="تعداد بالانس شده", value=bal_done, delta=f"{bal_done} مورد")
         else:
             st.metric(label="ستون بالانس یافت نشد", value=0)
     with m3:
-        # جمع کل هزینه‌ها
         total_cost = 0.0
         if "هزینه" in filtered_df.columns:
-            total_cost = pd.to_numeric(filtered_df["هزینه"], errors='coerce').fillna(0).sum()
+            # تبدیل ستون هزینه به عدد (حذف کاما و کاراکترهای غیر عددی)
+            costs = filtered_df["هزینه"].str.replace(',', '').replace('nan', '0')
+            total_cost = pd.to_numeric(costs, errors='coerce').fillna(0).sum()
             st.metric(label="جمع کل هزینه‌ها", value=f"{total_cost:,.0f} تومان")
         else:
             st.metric(label="ستون هزینه یافت نشد", value=0)
+    # --- بخش نمودار روند ارتعاشات (اگر تجهیز خاصی انتخاب شده باشد) ---
+    if selected_eq != "همه":
+        st.markdown("---")
+        st.subheader(f"📉 روند ارتعاشات تجهیز: {selected_eq}")
+        # فرض بر این است که ستونی به نام 'تاریخ' و 'مقدار ارتعاش' دارید
+        # در اینجا من از ستون‌هایی که احتمالا دارید استفاده می‌کنم، اگر نامشان متفاوت است تغییر دهید
+        date_col = next((col for col in df.columns if "تاریخ" in col), None)
+        val_col = next((col for col in df.columns if "mm/s" in col or "مقدار" in col), None)
+        if date_col and val_col:
+            trend_df = filtered_df[[date_col, val_col]].copy()
+            trend_df[val_col] = pd.to_numeric(trend_df[val_col], errors='coerce')
+            trend_df = trend_df.dropna().sort_values(by=date_col)
+            st.line_chart(data=trend_df, x=date_col, y=val_col)
+        else:
+            st.info("برای نمایش نمودار، ستون‌های 'تاریخ' و 'مقدار ارتعاش' در شیت مورد نیاز است.")
+    # --- جدول جزئیات ---
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش")
     st.dataframe(filtered_df, use_container_width=True)
-    st.markdown("""
-        <div style='text-align: center; margin-top: 50px; font-weight: bold; color: gray;'>
-        طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
-    st.error("❌ داده‌ها یافت نشدند. لطفاً فایل data.csv را بررسی کنید.")
+    st.error("❌ خطا در دریافت داده‌ها از گوگل‌شیت. لطفاً دسترسی فایل را بررسی کنید.")

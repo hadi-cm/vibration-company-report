@@ -70,11 +70,21 @@ st.markdown(f"""
 # ==============================================================================
 # 3. اتصال به گوگل‌شیت (با GID برای اطمینان)
 # ==============================================================================
-VIB_URL = "https://docs.google.com/spreadsheets/d/e/2KkSheets_uKqkgSqnQkGZ8UOyUKeE_QkqsCUQy44Vvqx/pub?output=csv"`
+
+
+VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
+
 @st.cache_data(ttl=60)
 def load_online_data():
     try:
-        df = pd.read_csv(VIB_URL)
+        # استفاده از یک User-Agent برای اینکه گوگل فکر نکند ما ربات هستیم و ارور 404 ندهد
+        import requests
+        import io
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(VIB_URL, headers=headers)
+        response.raise_for_status()
+        
+        df = pd.read_csv(io.StringIO(response.text))
         df.columns = df.columns.str.strip()
         for col in df.columns:
             df[col] = df[col].astype(str).str.strip()

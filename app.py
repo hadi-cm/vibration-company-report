@@ -32,7 +32,7 @@ def check_password():
 if not check_password():
     st.stop()
 # ==============================================================================
-# 2. تنظیمات صفحه و استایل (تراز شده)
+# 2. تنظیمات صفحه و استایل
 # ==============================================================================
 st.set_page_config(page_title="داشبورد فنی ارتعاشات سیمان تهران", layout="wide")
 def get_image_base64(path):
@@ -72,9 +72,8 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. اتصال به داده‌ها (با آدرس جدید شما و فرمت صحیح CSV)
+# 3. اتصال به داده‌ها
 # ==============================================================================
-# من آدرس شما را به فرمت CSV تبدیل کردم تا پایتون بتواند آن را بخواند
 VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_online_data():
@@ -88,17 +87,18 @@ def load_online_data():
         return None
 df = load_online_data()
 if df is not None:
-    # --- بخش فیلترها ---
+    # --- بخش فیلترها (اصلاح شده برای جلوگیری از TypeError) ---
     with st.expander("🔍 فیلترهای جستجو"):
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            all_lines = sorted([x for x in df["خط تولید"].unique() if x not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
+            # تبدیل هر مقدار به str قبل از sorted برای جلوگیری از ارور float و str
+            all_lines = sorted([str(x) for x in df["خط تولید"].unique() if str(x) not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
             selected_line = st.selectbox("۱- خط تولید:", ["همه"] + all_lines)
         with f_col2:
-            all_units = sorted([x for x in df["واحد"].unique() if x not in ['nan', 'None', '']]) if "واحد" in df.columns else []
+            all_units = sorted([str(x) for x in df["واحد"].unique() if str(x) not in ['nan', 'None', '']]) if "واحد" in df.columns else []
             selected_unit = st.selectbox("۲- واحد:", ["همه"] + all_units)
         with f_col3:
-            all_eq = sorted([x for x in df["عنوان تجهیز"].unique() if x not in ['nan', 'None', '']]) if "عنوان تجهیز" in df.columns else []
+            all_eq = sorted([str(x) for x in df["عنوان تجهیز"].unique() if str(x) not in ['nan', 'None', '']]) if "عنوان تجهیز" in df.columns else []
             selected_eq = st.selectbox("۳- تجهیز:", ["همه"] + all_eq)
     filtered_df = df.copy()
     if selected_line != "همه":
@@ -141,4 +141,4 @@ if df is not None:
     st.dataframe(filtered_df, use_container_width=True)
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
-    st.error("❌ خطا در دریافت داده‌ها. لطفاً دسترسی Share گوگل‌شیت را روی Anyone with the link قرار دهید.")
+    st.error("❌ خطا در دریافت داده‌ها. لطفاً دسترسی Share گوگل‌شیت را بررسی کنید.")

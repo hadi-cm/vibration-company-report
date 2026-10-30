@@ -34,7 +34,7 @@ if not check_password():
 # ==============================================================================
 # 2. تنظیمات صفحه و استایل
 # ==============================================================================
-st.set_page_config(page_title="داشبورد پایش وضعیت ارتعاشات سیمان تهران", layout="wide")
+st.set_page_config(page_title="داشبورد پایش وضعیت تجهیزات سیمان تهران", layout="wide")
 def get_image_base64(path):
     try:
         with open(path, "rb") as image_file:
@@ -45,17 +45,18 @@ logo_faz_fidar_base64 = get_image_base64("my_logo.png")
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
-    div[data-testid="stMetricValue"] { text-align: right; }
+    div[data-testid="stMetricValue"] { text-align: center; }
     .stDataFrame { direction: rtl; }
     .logo-container {
         display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 20px; background-color: white; padding: 10px 20px;
-        border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px; background-color: white; padding: 15px 30px;
+        border-radius: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .logo-img { width: 100px; height: auto; object-fit: contain; }
+    .logo-img { width: 110px; height: auto; object-fit: contain; }
     .main-title { 
-        flex-grow: 1; text-align: center; color: #1E3A8D; 
-        font-size: 24px; font-weight: bold; margin: 0 20px;
+        flex: 1; text-align: center; color: #1E3A8D; 
+        font-size: 26px; font-weight: bold; margin: 0 20px;
+        font-family: 'Tahoma', 'Arial';
     }
     .footer {
         position: fixed; left: 0; bottom: 0; width: 100%;
@@ -83,35 +84,44 @@ def load_online_data():
         df = df.astype(str).apply(lambda x: x.str.strip())
         return df
     except Exception as e:
-        st.error(f"❌ خطا در اتصال به گوگل‌شیت: {e}")
+        st.error(f"❌ خطا در اتصال: {e}")
         return None
 df = load_online_data()
 if df is not None:
-    # --- بخش فیلترها (اصلاح شده برای جلوگیری از TypeError) ---
-    with st.expander("🔍 فیلترهای جستجو"):
+    # ==============================================================================
+    # 4. بخش فیلترهای پیشرفته (جستجو و مقایسه)
+    # ==============================================================================
+    with st.expander("🔍 سیستم جستجو و فیلتر پیشرفته", expanded=True):
+        st.write("برای مقایسه یا جستجوی سریع، از گزینه‌های زیر استفاده کنید:")
         f_col1, f_col2, f_col3 = st.columns(3)
         with f_col1:
-            # تبدیل هر مقدار به str قبل از sorted برای جلوگیری از ارور float و str
+            # فیلتر خط تولید
             all_lines = sorted([str(x) for x in df["خط تولید"].unique() if str(x) not in ['nan', 'None', '']]) if "خط تولید" in df.columns else []
-            selected_line = st.selectbox("۱- خط تولید:", ["همه"] + all_lines)
+            selected_line = st.selectbox("📍 انتخاب خط تولید:", ["همه"] + all_lines)
         with f_col2:
+            # فیلتر واحد
             all_units = sorted([str(x) for x in df["واحد"].unique() if str(x) not in ['nan', 'None', '']]) if "واحد" in df.columns else []
-            selected_unit = st.selectbox("۲- واحد:", ["همه"] + all_units)
+            selected_unit = st.selectbox("🏢 انتخاب واحد:", ["همه"] + all_units)
         with f_col3:
-            all_eq = sorted([str(x) for x in df["عنوان تجهیز"].unique() if str(x) not in ['nan', 'None', '']]) if "عنوان تجهیز" in df.columns else []
-            selected_eq = st.selectbox("۳- تجهیز:", ["همه"] + all_eq)
+            # جستجوی متنی برای نام تجهیز (جهت سرعت بیشتر در مقایسه)
+            search_eq = st.text_input("🔍 جستجوی نام تجهیز یا کد:", "")
+    # اعمال فیلترها روی داده‌ها
     filtered_df = df.copy()
     if selected_line != "همه":
         filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
     if selected_unit != "همه":
         filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
-    if selected_eq != "همه":
-        filtered_df = filtered_df[filtered_df["عنوان تجهیز"] == selected_eq]
+    if search_eq:
+        # جستجوی منعطف: اگر عبارت وارد شده در هر جای نام تجهیز بود، نمایش بده
+        filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
+    # ==============================================================================
+    # 5. نمایش نتایج و متریک‌ها
+    # ==============================================================================
     st.markdown("---")
     st.subheader("📈 وضعیت تحلیل فنی")
     m1, m2, m3 = st.columns(3)
     with m1:
-        st.metric(label="تعداد کل تجهیزات", value=len(filtered_df))
+        st.metric(label="تعداد کل تجهیزات یافت شده", value=len(filtered_df))
     with m2:
         if "بالانس" in filtered_df.columns:
             bal_done = filtered_df[~filtered_df["بالانس"].isin(['nan', 'None', ''])].shape[0]
@@ -121,24 +131,15 @@ if df is not None:
     with m3:
         total_cost = 0.0
         if "هزینه" in filtered_df.columns:
-            costs = filtered_df["هزینه"].str.replace(',', '').replace('nan', '0')
-            total_cost = pd.to_numeric(costs, errors='coerce').fillna(0).sum()
+            cost_series = filtered_df["هزینه"].str.replace(r'[^\d.]', '', regex=True)
+            total_cost = pd.to_numeric(cost_series, errors='coerce').fillna(0).sum()
             st.metric(label="جمع کل هزینه‌ها", value=f"{total_cost:,.0f} تومان")
         else:
             st.metric(label="ستون هزینه یافت نشد", value=0)
-    if selected_eq != "همه":
-        st.markdown("---")
-        st.subheader(f"📉 روند ارتعاشات تجهیز: {selected_eq}")
-        date_col = next((col for col in df.columns if "تاریخ" in col), None)
-        val_col = next((col for col in df.columns if "mm/s" in col or "مقدار" in col), None)
-        if date_col and val_col:
-            trend_df = filtered_df[[date_col, val_col]].copy()
-            trend_df[val_col] = pd.to_numeric(trend_df[val_col], errors='coerce')
-            trend_df = trend_df.dropna().sort_values(by=date_col)
-            st.line_chart(data=trend_df, x=date_col, y=val_col)
+    # نمایش جدول نهایی
     st.markdown("---")
-    st.subheader("📋 جدول جزئیات پایش")
+    st.subheader("📋 جدول جزئیات پایش و مقایسه")
     st.dataframe(filtered_df, use_container_width=True)
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
 else:
-    st.error("❌ خطا در دریافت داده‌ها. لطفاً دسترسی Share گوگل‌شیت را بررسی کنید.")
+    st.error("❌ خطا در دریافت داده‌ها.")

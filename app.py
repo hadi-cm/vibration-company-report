@@ -128,3 +128,5 @@ if df is not None:
         طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان
         </div>
         """, unsafe_allow_html=True)
+else:
+    st.error("❌ داده‌ها یافت نشدند. لطفاً فایل data.csv را بررسی کنید.")

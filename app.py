@@ -167,7 +167,7 @@ if df is not None:
             return '' 
         except: return ''
     if vib_col and not filtered_df.empty:
-        styled_df = filtered_df.style.applymap(apply_color, subset=[vib_col])
+styled_df = filtered_df.style.map(apply_color, subset=[vib_col])
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
         st.info(f"💡 راهنمای رنگی ستون {vib_col}: سفید (عادی) | زرد (۴.۷-۷.۲) | قرمز (بالای ۷.۲)")
     else:

@@ -71,32 +71,45 @@ st.markdown(f"""
     </div>
     """, unsafe_allow_html=True)
 # ==============================================================================
-# 3. بارگذاری و پردازش داده‌ها
+# 3. بارگذاری داده‌ها با متد شماره ستون (ضد به‌هم‌ریختگی نام‌ها)
 # ==============================================================================
 VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_and_process_data():
     try:
+        # خواندن فایل بدون در نظر گرفتن نام ستون‌ها در ابتدا
         df = pd.read_csv(VIB_URL)
-        df.columns = df.columns.str.strip()
-        # اصلاح نام ستون‌ها (بر اساس جایگاه دقیق عکس شما)
-        cols_list = df.columns.tolist()
-        if len(cols_list) > 17:
-            if cols_list[12].strip() == "سیستم درایور": cols_list[12] = "نوع اتصال"
-            if cols_list[17].strip() == "بالانس": cols_list[17] = "شماره بیرینگ"
-            df.columns = cols_list
-        # تبدیل ستون ارتعاش به عدد برای رنگ‌بندی
-        vib_col = next((col for col in df.columns if "mm/s" in col), None)
-        if vib_col:
-            df[vib_col] = pd.to_numeric(df[vib_col].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0.0)
+        # تعریف دستی نام ستون‌ها بر اساس ترتیب عکس شما
+        # این کار باعث می‌شود دیگر مهم نباشد نام‌ها در اکسل به‌هم‌ریخته‌اند یا نه
+        manual_columns = [
+            "تاریخ", "تعداد", "خط تولید", "واحد", "عنوان تجهیز", "محل اندازه گیری", 
+            "v1", "v2", "v3", "v_max", "mm/s", "تجهیز", "نوع اتصال", "دما", 
+            "توضیحات", "وضعیت", "بالانس", "شماره بیرینگ", "هزینه", "اولویت"
+        ]
+        # اگر تعداد ستون‌های فایل با لیست ما یکی نبود، نام‌ها را به صورت پیش‌فرض می‌گذاریم
+        if len(df.columns) != len(manual_columns):
+            # اگر تعداد متفاوت بود، فقط نام‌های اصلی را جایگزین می‌کنیم
+            df.columns = [f"Col_{i}" for i in range(len(df.columns))]
+            # تلاش برای یافتن ستون mm/s در میان نام‌های به‌هم‌ریخته
+            for i, col in enumerate(df.columns):
+                if "mm/s" in str(df.columns[i]):
+                    df.rename(columns={df.columns[i]: "mm/s"}, inplace=True)
+        else:
+            df.columns = manual_columns
+        # تبدیل ستون ارتعاش به عدد
+        if "mm/s" in df.columns:
+            df["mm/s"] = pd.to_numeric(df["mm/s"].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0.0)
+        # تبدیل هزینه به عدد
+        if "هزینه" in df.columns:
+            df["هزینه"] = pd.to_numeric(df["هزینه"].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce').fillna(0.0)
         return df
     except Exception as e:
-        st.error(f"❌ خطا در بارگذاری: {e}")
+        st.error(f"❌ خطا در پردازش داده‌ها: {e}")
         return None
 df = load_and_process_data()
 if df is not None:
     # ==============================================================================
-    # 4. فیلترها (اصلاح شده برای نمایش تمام نقاط P)
+    # 4. فیلترها
     # ==============================================================================
     with st.expander("🔍 سیستم جستجو و فیلتر پیشرفته", expanded=True):
         f_row1_col1, f_row1_col2, f_row1_col3 = st.columns(3)
@@ -110,33 +123,26 @@ if df is not None:
             search_eq = st.text_input("🔍 نام تجهیز:", "")
         f_row2_col1, f_row2_col2 = st.columns(2)
         with f_row2_col1:
-            # اصلاح فیلتر نقاط: تبدیل همه به حروف بزرگ برای یکپارچگی در لیست
-            point_col = next((col for col in df.columns if "محل" in col or "نقطه" in col), None)
-            if point_col:
-                # استخراج نقاط، حذف nan و تبدیل به حروف بزرگ برای نمایش تمیزتر
-                all_points = sorted([str(x).strip().upper() for x in df[point_col].unique() if str(x) not in ['nan', 'None', '']])
-                selected_point = st.selectbox("📍 نقطه اندازه‌گیری (P1, P2, ...):", ["همه نقاط"] + all_points)
+            if "محل اندازه گیری" in df.columns:
+                all_points = sorted([str(x).strip().upper() for x in df["محل اندازه گیری"].unique() if str(x) not in ['nan', 'None', '']])
+                selected_point = st.selectbox("📍 نقطه اندازه‌گیری (P):", ["همه نقاط"] + all_points)
             else:
                 selected_point = "همه نقاط"
         with f_row2_col2:
-            date_col_name = next((col for col in df.columns if "تاریخ" in col), None)
-            if date_col_name:
-                temp_df = df.copy()
-                if search_eq: temp_df = temp_df[temp_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
-                available_dates = sorted(temp_df[date_col_name].unique(), reverse=True)
+            if "تاریخ" in df.columns:
+                available_dates = sorted(df["تاریخ"].unique(), reverse=True)
                 selected_date = st.selectbox("📅 تاریخ خاص:", ["همه تاریخ‌ها"] + list(available_dates))
             else:
                 selected_date = "همه تاریخ‌ها"
-    # اعمال فیلترها با منطق Case-Insensitive (بدون حساسیت به کوچک و بزرگی حروف)
+    # اعمال فیلترها
     filtered_df = df.copy()
-    if selected_line != "همه": filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
-    if selected_unit != "همه": filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
-    if search_eq: filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
-    if selected_point != "همه نقاط" and point_col:
-        # تبدیل ستون نقطه به حروف بزرگ هنگام مقایسه برای اینکه p1 و P1 هر دو پیدا شوند
-        filtered_df = filtered_df[filtered_df[point_col].astype(str).str.strip().str.upper() == selected_point]
-    if selected_date != "همه تاریخ‌ها" and date_col_name:
-        filtered_df = filtered_df[filtered_df[date_col_name] == selected_date]
+    if selected_line != "همه" and "خط تولید" in df.columns: filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
+    if selected_unit != "همه" and "واحد" in df.columns: filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
+    if search_eq and "عنوان تجهیز" in df.columns: filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
+    if selected_point != "همه نقاط" and "محل اندازه گیری" in df.columns: 
+        filtered_df = filtered_df[filtered_df["محل اندازه گیری"].astype(str).str.strip().str.upper() == selected_point]
+    if selected_date != "همه تاریخ‌ها" and "تاریخ" in df.columns:
+        filtered_df = filtered_df[filtered_df["تاریخ"] == selected_date]
     # ==============================================================================
     # 5. متریک‌ها
     # ==============================================================================
@@ -148,32 +154,26 @@ if df is not None:
         bal_count = filtered_df[~filtered_df["بالانس"].isin(['nan', 'None', ''])].shape[0] if "بالانس" in filtered_df.columns else 0
         st.metric("تعداد بالانس شده", bal_count)
     with m3:
-        total_cost = 0.0
-        if "هزینه" in filtered_df.columns:
-            cost_series = filtered_df["هزینه"].astype(str).str.replace(r'[^\d.]', '', regex=True)
-            total_cost = pd.to_numeric(cost_series, errors='coerce').fillna(0).sum()
-            st.metric("جمع هزینه‌ها", f"{total_cost:,.0f} تومان")
-   
-
+        total_cost = filtered_df["هزینه"].sum() if "هزینه" in filtered_df.columns else 0.0
+        st.metric("جمع هزینه‌ها", f"{total_cost:,.0f} تومان")
     # ==============================================================================
-    # 6. نمایش جدول با رنگ‌بندی ارتعاشات (اصلاح شده)
+    # 6. نمایش جدول با رنگ‌بندی
     # ==============================================================================
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
-    
-    vib_col = next((col for col in df.columns if "mm/s" in col), None)
-
     def apply_color(val):
         try:
             num = float(val)
-            if num > 7.2: return 'background-color: #ff4b4b; color: white; font-weight: bold' # قرمز
-            if num > 4.7: return 'background-color: #ffff00; color: black; font-weight: bold' # زرد
+            if num > 7.2: return 'background-color: #ff4b4b; color: white; font-weight: bold'
+            if num > 4.7: return 'background-color: #ffff00; color: black; font-weight: bold'
             return '' 
         except: return ''
-
-    if vib_col and not filtered_df.empty:
-         styled_df = filtered_df.style.map(apply_color, subset=[vib_col])
-         st.dataframe(styled_df, use_container_width=True, hide_index=True)
-         st.info(f"💡 راهنمای رنگی ستون {vib_col}: سفید (عادی) | زرد (۴.۷-۷.۲) | قرمز (بالای ۷.۲)")
+    if "mm/s" in filtered_df.columns and not filtered_df.empty:
+        styled_df = filtered_df.style.map(apply_color, subset=["mm/s"])
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        st.info(f"💡 راهنمای رنگی ستون mm/s: سفید (عادی) | زرد (۴.۷-۷.۲) | قرمز (بالای ۷.۲)")
     else:
-         st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+        st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+    st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
+else:
+    st.error("❌ خطا در دریافت داده‌ها. لطفاً دسترسی گوگل‌شیت را بررسی کنید.")

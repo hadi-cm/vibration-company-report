@@ -1,3 +1,4 @@
+cat << 'EOF' > app.py
 import pandas as pd
 import streamlit as st
 import base64
@@ -70,7 +71,6 @@ VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EI
 def load_data():
     try:
         df = pd.read_csv(VIB_URL)
-        # نام‌گذاری بر اساس لیست شما
         expected_cols = [
             "تاریخ", "خط تولید", "واحد", "عنوان تجهیز", "تصویر", "محل اندازه گیری", 
             "عمودی", "افقی", "محوری", "mm/s", "دور", "بالانس", "سیستم درایور", 
@@ -79,7 +79,6 @@ def load_data():
         if len(df.columns) == len(expected_cols):
             df.columns = expected_cols
         else:
-            # اگر تعداد ستون‌ها متفاوت بود، از نام‌های اصلی استفاده می‌کنیم
             for i, col in enumerate(df.columns):
                 col_str = str(col).lower()
                 if 'mm/s' in col_str: df.rename(columns={col: 'mm/s'}, inplace=True)
@@ -96,9 +95,6 @@ def load_data():
         return None
 df = load_data()
 if df is not None:
-    # ==============================================================================
-    # 4. فیلترها
-    # ==============================================================================
     with st.expander("🔍 سیستم جستجو و فیلتر پیشرفته", expanded=True):
         f1, f2, f3 = st.columns(3)
         with f1:
@@ -122,9 +118,6 @@ if df is not None:
     if search_eq: f_df = f_df[f_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
     if sel_point != "همه نقاط": f_df = f_df[f_df["محل اندازه گیری"] == sel_point]
     if sel_date != "همه تاریخ‌ها": f_df = f_df[f_df["تاریخ"] == sel_date]
-    # ==============================================================================
-    # 5. متریک‌ها
-    # ==============================================================================
     st.subheader("📈 وضعیت تحلیل فنی")
     m1, m2, m3 = st.columns(3)
     with m1: st.metric("تعداد رکوردها", len(f_df))
@@ -134,28 +127,20 @@ if df is not None:
     with m3:
         total_c = f_df["هزینه"].sum()
         st.metric("جمع هزینه‌ها", f"{total_c:,.0f} تومان")
-    # ==============================================================================
-    # 6. نمودار ترند (Trend Analysis) - بدون نیاز به Plotly
-    # ==============================================================================
     if not f_df.empty and search_eq:
         st.markdown("---")
         st.subheader("📉 تحلیل روند ارتعاش (Trend)")
         trend_df = df[df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)].copy()
         if not trend_df.empty:
             trend_df = trend_df.sort_values("تاریخ")
-            # استفاده از نمودار داخلی استریم‌لیت (Line Chart)
             st.line_chart(trend_df.set_index("تاریخ")["mm/s"])
             st.caption("💡 برای مشاهده نمودار، حتماً نام تجهیز را در فیلتر جستجو تایپ کنید.")
         else:
             st.warning("تجهیزی با این نام یافت نشد.")
-    # ==============================================================================
-    # 7. نمایش جدول و رنگ‌بندی
-    # ==============================================================================
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
     def color_cells(row):
         styles = ['']  len(row)
-        # رنگ‌بندی mm/s
         if 'mm/s' in row.index:
             val = row['mm/s']
             idx = row.index.get_loc('mm/s')
@@ -163,8 +148,6 @@ if df is not None:
             elif val > 7.2: styles[idx] = 'background-color: #ffa500; color: black; font-weight: bold'
             elif val > 4.7: styles[idx] = 'background-color: #ffff00; color: black; font-weight: bold'
             else: styles[idx] = 'background-color: #ffffff; color: black'
-
-        # رنگ‌بندی وضعیت
         if 'وضعیت' in row.index:
             stat = str(row['وضعیت']).strip()
             idx = row.index.get_loc('وضعیت')
@@ -179,6 +162,6 @@ if df is not None:
         st.warning("هیچ داده‌ای با این فیلترها پیدا نشد.")
 
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
-
 else:
     st.error("❌ خطا در دریافت داده‌ها.")
+EOF

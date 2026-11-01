@@ -153,12 +153,16 @@ if df is not None:
             cost_series = filtered_df["هزینه"].astype(str).str.replace(r'[^\d.]', '', regex=True)
             total_cost = pd.to_numeric(cost_series, errors='coerce').fillna(0).sum()
             st.metric("جمع هزینه‌ها", f"{total_cost:,.0f} تومان")
+   
+
     # ==============================================================================
-    # 6. نمایش جدول با رنگ‌بندی
+    # 6. نمایش جدول با رنگ‌بندی ارتعاشات (اصلاح شده)
     # ==============================================================================
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
+    
     vib_col = next((col for col in df.columns if "mm/s" in col), None)
+
     def apply_color(val):
         try:
             num = float(val)
@@ -166,12 +170,11 @@ if df is not None:
             if num > 4.7: return 'background-color: #ffff00; color: black; font-weight: bold' # زرد
             return '' 
         except: return ''
+
     if vib_col and not filtered_df.empty:
-styled_df = filtered_df.style.map(apply_color, subset=[vib_col])
+        # دقت کنید: این خطوط باید نسبت به دستور if بالا، جلوتر (Indented) باشند
+        styled_df = filtered_df.style.map(apply_color, subset=[vib_col])
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
         st.info(f"💡 راهنمای رنگی ستون {vib_col}: سفید (عادی) | زرد (۴.۷-۷.۲) | قرمز (بالای ۷.۲)")
     else:
         st.dataframe(filtered_df, use_container_width=True, hide_index=True)
-    st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)
-else:
-    st.error("❌ خطا در دریافت داده‌ها.")

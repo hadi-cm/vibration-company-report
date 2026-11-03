@@ -116,8 +116,8 @@ if df is not None:
     if search_eq: filtered_df = filtered_df[filtered_df["عنوان تجهیز"].str.contains(search_eq, case=False, na=False)]
     if selected_date != "همه تاریخ‌ها" and date_col_name:
         filtered_df = filtered_df[filtered_df[date_col_name] == selected_date]
-st.markdown("---")
-    st.subheader("📈 وضعیت تحلیل فنی")
+    # نمایش بخش تحلیل فنی
+    st.markdown("### 📈 وضعیت تحلیل فنی")
     m1, m2, m3 = st.columns(3)
     with m1: st.metric("تعداد رکورد یافت شده", len(filtered_df))
     with m2:
@@ -126,9 +126,8 @@ st.markdown("---")
     with m3:
         total_cost = filtered_df["هزینه"].sum() if "هزینه" in filtered_df.columns else 0
         st.metric("جمع کل هزینه‌ها", f"{total_cost:,.0f} تومان")
-st.markdown("---")
-    st.subheader("📋 جدول جزئیات پایش و مقایسه")
-    # شناسایی ستون‌های ارتعاش برای رنگ‌بندی
+    # نمایش جدول
+    st.markdown("### 📋 جدول جزئیات پایش و مقایسه")
     vib_cols = [col for col in filtered_df.columns if any(name in str(col) for name in ["افقی", "عمودی", "محوری", "mm/s"])]
     def color_vibration(val):
         try:
@@ -140,7 +139,7 @@ st.markdown("---")
     if vib_cols:
         styled_df = filtered_df.style.map(color_vibration, subset=vib_cols)
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
-        st.info(f"💡 راهنمای رنگی: سبز (عادی) | زرد (هشدار ۴.۷-۷.۲) | قرمز (خطر بالای ۷.۲)")
+        st.info("💡 راهنمای رنگی: سبز (عادی) | زرد (هشدار ۴.۷-۷.۲) | قرمز (خطر بالای ۷.۲)")
     else:
         st.dataframe(filtered_df, use_container_width=True, hide_index=True)
     st.markdown('<div class="footer">طراحی و توسعه: مهندس هادی زندیه | شرکت فاز فیدار پارسیان</div>', unsafe_allow_html=True)

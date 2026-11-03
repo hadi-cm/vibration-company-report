@@ -75,19 +75,15 @@ st.markdown(f"""
 # ==============================================================================
 # 3. اتصال به داده‌ها
 # ==============================================================================
-# استفاده از آی‌دی دقیق شما برای دریافت داده
 VIB_URL = "https://docs.google.com/spreadsheets/d/1H4Yf3ilu72hI7YZns6EXNMpOfH-EII98_sEO_81uXrs/export?format=csv&gid=0"
 @st.cache_data(ttl=60)
 def load_and_process_data():
     try:
         df = pd.read_csv(VIB_URL)
         df.columns = df.columns.str.strip()
-        # تمیز کردن داده‌ها
         df = df.astype(str).apply(lambda x: x.str.strip())
-        # اصلاح نام ستون‌ها بر اساس جدول شما
         if "سیستم درایور" in df.columns:
             df = df.rename(columns={"سیستم درایور": "نوع اتصال"})
-        # تبدیل ستون‌های عددی برای محاسبات
         numeric_cols = ["بالانس", "هزینه"]
         for col in numeric_cols:
             if col in df.columns:
@@ -114,7 +110,6 @@ if df is not None:
             if date_col_name and not df.empty:
                 available_dates = sorted(df[date_col_name].unique(), reverse=True)
                 selected_date = st.selectbox("📅 تاریخ خاص:", ["همه تاریخ‌ها"] + list(available_dates))
-    # اعمال فیلترها
     filtered_df = df.copy()
     if selected_line != "همه": filtered_df = filtered_df[filtered_df["خط تولید"] == selected_line]
     if selected_unit != "همه": filtered_df = filtered_df[filtered_df["واحد"] == selected_unit]
@@ -133,19 +128,16 @@ if df is not None:
         st.metric("جمع کل هزینه‌ها", f"{total_cost:,.0f} تومان")
     st.markdown("---")
     st.subheader("📋 جدول جزئیات پایش و مقایسه")
-    # شناسایی ستون‌های ارتعاش (افقی، عمودی، محوری)
-    vib_cols = [col for col in filtered_df.columns if any(name in str(col) for name in ["افقی", "عمودی", "محوری"])]
+    # شناسایی ستون‌های ارتعاش برای رنگ‌بندی
+    vib_cols = [col for col in filtered_df.columns if any(name in str(col) for name in ["افقی", "عمودی", "محوری", "mm/s"])]
     def color_vibration(val):
         try:
-            # مدیریت جداکننده‌های فارسی و انگلیسی
-            num_str = str(val).replace(",", ".").replace("٫", ".")
-            num = float(num_str)
-            if num > 7.2: return 'background-color: #ffcccc; color: #9b0000; font-weight: bold'
-            if num > 4.7: return 'background-color: #fff2b2; color: #856404; font-weight: bold'
+            num = float(str(val).replace(",", ".").replace("٫", "."))
+            if num > 7.2: return 'background-color: #ffcccc; color: red; font-weight: bold'
+            if num > 4.7: return 'background-color: #ffffcc; color: #856404; font-weight: bold'
             return 'background-color: #e6ffed; color: #2e7d32'
         except: return ''
     if vib_cols:
-        # اعمال رنگ‌بندی روی ستون‌های پیدا شده
         styled_df = filtered_df.style.map(color_vibration, subset=vib_cols)
         st.dataframe(styled_df, use_container_width=True, hide_index=True)
         st.info(f"💡 راهنمای رنگی: سبز (عادی) | زرد (هشدار ۴.۷-۷.۲) | قرمز (خطر بالای ۷.۲)")
